@@ -23,6 +23,12 @@ export default defineConfig({
         target: 'http://localhost:80',
         changeOrigin: true,
         secure: false
+      },
+      '/backend/api': {
+        target: 'http://localhost:80',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/backend/, '/Github/dsa-project/backend')
       }
     }
   },

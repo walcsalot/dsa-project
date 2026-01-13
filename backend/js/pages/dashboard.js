@@ -1,3 +1,6 @@
+import Swal from 'sweetalert2';
+import { initSidebar } from '../modules/sidebar.js';
+
 /**
  * Dashboard functionality
  * Handles theme toggle, profile dropdown, mobile menu, and logout
@@ -48,9 +51,34 @@ export function initLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     const profileLogoutBtn = document.getElementById('profileLogoutBtn');
     
-    const handleLogout = () => {
-        if (confirm('Are you sure you want to logout?')) {
-            window.location.href = '/index.php';
+    const handleLogout = async () => {
+        const result = await Swal.fire({
+            icon: 'question',
+            title: 'Logout?',
+            text: 'Are you sure you want to logout?',
+            showCancelButton: true,
+            confirmButtonColor: '#800000',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, logout',
+            cancelButtonText: 'Cancel'
+        });
+        
+        if (result.isConfirmed) {
+            // Call logout API to destroy session
+            try {
+                const response = await fetch('/backend/logout.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // Redirect to login page
+                window.location.href = '/index.php';
+            } catch (error) {
+                // Even if API call fails, redirect to login
+                window.location.href = '/index.php';
+            }
         }
     };
     
@@ -66,4 +94,5 @@ export function initDashboard() {
     initProfileDropdown();
     initMobileMenu();
     initLogout();
+    initSidebar();
 }

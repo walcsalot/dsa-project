@@ -1,0 +1,47 @@
+---
+name: ojt-rules
+description: Cursor AI rules for OJT project using TailwindCSS v4.1, modern PHP, and Vite
+---
+
+# Overview
+
+These rules guide Cursor AI to generate clean, responsive, and modern code for our OJT project.
+
+# TailwindCSS
+
+- Use **TailwindCSS v4.1** utility classes only.
+- Ensure all layouts are **responsive**, especially for **mobile-first design**.
+- Prefer **flexbox** and **grid** for layout.
+- Use **`@apply`** for reusable class patterns in component styles.
+
+# JavaScript
+
+- Use **modern ES6+ syntax** (e.g., `let`, `const`, arrow functions).
+- Avoid overly complex logic; prefer **readable and modular code**.
+- Use **async/await** for asynchronous operations.
+- Prefer **vanilla JS** unless a library is explicitly required.
+
+# PHP
+
+- Use **PHP 8.2+** syntax and features (e.g., named arguments, union types).
+- Follow **PSR-12** coding standards.
+- Use **PDO** for database interactions with prepared statements.
+- Avoid deprecated functions and ensure **secure input handling**.
+
+# Vite
+
+- Ensure **Vite config is optimized** for production.
+- Use **`vite.config.js`** with proper aliasing and plugin setup.
+- Ensure **hot module reload (HMR)** works during development.
+- Output assets should be **versioned and hashed** for cache busting.
+
+# File Structure
+
+- Follow a **modular folder structure**: `components/`, `pages/`, `assets/`, `api/`.
+- Keep **logic separated** from views (MVC-style if applicable).
+
+# Code Quality
+
+- Enforce **consistent indentation** (2 spaces).
+- Use **descriptive variable and function names**.
+- Include **comments** for complex logic or business rules.
