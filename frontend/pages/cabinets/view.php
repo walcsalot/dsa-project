@@ -320,5 +320,172 @@ $cabinetName = $cabinetId ? 'Cabinet ' . $cabinetId : 'Cabinet';
         <!-- Production: Load built assets -->
         <script type="module" src="/dist/backend/js/main.js"></script>
     <?php endif; ?>
+    
+    <!-- Celebration Effect on Page Load -->
+    <script type="module">
+        // Wait for page to be fully loaded
+        window.addEventListener('load', async () => {
+            // Small delay for smooth transition from papers.php animation
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Dynamic import of canvas-confetti
+            const confetti = await import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/+esm')
+                .then(module => module.default)
+                .catch(() => null);
+            
+            if (confetti) {
+                // First burst - from left
+                confetti({
+                    particleCount: 50,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.6 },
+                    colors: ['#800000', '#a00000', '#600000', '#FFD700', '#FFA500']
+                });
+                
+                // Second burst - from right
+                confetti({
+                    particleCount: 50,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.6 },
+                    colors: ['#800000', '#a00000', '#600000', '#FFD700', '#FFA500']
+                });
+                
+                // Center burst after a small delay
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#800000', '#a00000', '#600000', '#FFD700', '#FFA500']
+                    });
+                }, 200);
+                
+                // Final sparkle burst
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 30,
+                        spread: 360,
+                        ticks: 50,
+                        gravity: 0,
+                        decay: 0.94,
+                        startVelocity: 30,
+                        colors: ['#FFD700', '#FFA500', '#FF6347'],
+                        origin: { x: 0.5, y: 0.5 }
+                    });
+                }, 400);
+            } else {
+                // Fallback: Simple CSS animation if confetti library fails to load
+                const celebrationOverlay = document.createElement('div');
+                celebrationOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    pointer-events: none;
+                    z-index: 9999;
+                    background: radial-gradient(circle at center, rgba(128, 0, 0, 0.2) 0%, transparent 70%);
+                    animation: celebrationPulse 0.8s ease-out;
+                `;
+                
+                // Add CSS animation
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes celebrationPulse {
+                        0% { opacity: 0; transform: scale(0.8); }
+                        50% { opacity: 1; transform: scale(1.05); }
+                        100% { opacity: 0; transform: scale(1); }
+                    }
+                `;
+                document.head.appendChild(style);
+                document.body.appendChild(celebrationOverlay);
+                
+                setTimeout(() => {
+                    celebrationOverlay.remove();
+                }, 800);
+            }
+            
+            // Add subtle scale-in animation to main content
+            const mainContent = document.querySelector('main');
+            if (mainContent) {
+                mainContent.style.animation = 'scaleIn 0.5s ease-out';
+                const scaleInStyle = document.createElement('style');
+                scaleInStyle.textContent = `
+                    @keyframes scaleIn {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.95);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+                    @keyframes slideInDown {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-100px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                    @keyframes slideOutUp {
+                        from {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                        to {
+                            opacity: 0;
+                            transform: translateY(-100px);
+                        }
+                    }
+                `;
+                document.head.appendChild(scaleInStyle);
+            }
+            
+            // Show welcome toast notification
+            const welcomeToast = document.createElement('div');
+            welcomeToast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #800000 0%, #a00000 100%);
+                color: white;
+                padding: 16px 32px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(128, 0, 0, 0.3);
+                z-index: 10000;
+                font-weight: 600;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                animation: slideInDown 0.5s ease-out;
+                pointer-events: none;
+            `;
+            
+            welcomeToast.innerHTML = `
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Cabinet Opened Successfully! 🎉</span>
+            `;
+            
+            document.body.appendChild(welcomeToast);
+            
+            // Remove toast after 2.5 seconds
+            setTimeout(() => {
+                welcomeToast.style.animation = 'slideOutUp 0.5s ease-in';
+                setTimeout(() => {
+                    welcomeToast.remove();
+                }, 500);
+            }, 2500);
+        });
+    </script>
 </body>
 </html>

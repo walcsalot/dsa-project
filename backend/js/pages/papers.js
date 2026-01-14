@@ -1233,11 +1233,17 @@ function createCabinetCard(cabinet) {
             </div>
             
             <!-- Cabinet Body -->
-            <div class="cabinet-body p-6 ${cabinetBg} transition-all duration-300">
-                <!-- Cabinet Header (Editable Area) -->
-                <div class="bg-white rounded-lg p-4 mb-4 shadow-sm border ${cabinetBorder}">
+            <div class="cabinet-body p-6 ${cabinetBg} transition-all duration-300 relative">
+                <!-- Metal Top Trim -->
+                <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-b from-gray-400 to-gray-500 rounded-t-xl shadow-inner"></div>
+                
+                <!-- Cabinet Header (Editable Area) - Label Holder -->
+                <div class="bg-white rounded-lg p-4 mb-4 shadow-md border-2 ${cabinetBorder} relative overflow-hidden" style="margin-top: 0.5rem;">
+                    <!-- Metallic Frame Effect -->
+                    <div class="absolute inset-0 border-4 border-gray-300 rounded-lg pointer-events-none opacity-50"></div>
+                    
                     <!-- Cabinet Name - Editable -->
-                    <div class="name-section mb-2">
+                    <div class="name-section mb-2 relative z-10">
                         <!-- View Mode -->
                         <div class="name-view-mode group cursor-pointer" title="Click to edit name">
                             <h3 class="cabinet-name text-lg font-bold text-gray-800 truncate hover:text-[#800000] transition-colors">
@@ -1268,7 +1274,7 @@ function createCabinetCard(cabinet) {
                     </div>
                     
                     <!-- Cabinet Description - Editable -->
-                    <div class="description-section">
+                    <div class="description-section relative z-10">
                         <!-- View Mode -->
                         <div class="description-view-mode group cursor-pointer" title="Click to edit description">
                             <p class="cabinet-description text-sm text-gray-600 truncate hover:text-[#800000] transition-colors">
@@ -1300,32 +1306,84 @@ function createCabinetCard(cabinet) {
                     </div>
                 </div>
                 
-                <!-- Drawer 1 (Animated) -->
-                <div class="drawer-1 relative ${drawerColor} rounded-lg p-4 mb-3 border-2 ${cabinetBorder} transition-all duration-700 shadow-inner">
-                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${handleColor} w-16 h-2 rounded-full shadow-md"></div>
+                <!-- Drawer 1 (Large Top Drawer) -->
+                <div class="drawer-1 relative ${drawerColor} rounded-md p-5 mb-3 border-3 border-gray-400 transition-all duration-700 shadow-lg" style="box-shadow: inset 0 2px 8px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);">
+                    <!-- Drawer Handle -->
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <!-- Handle Mounting Screws -->
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -left-10 top-1/2 -translate-y-1/2"></div>
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -right-10 top-1/2 -translate-y-1/2"></div>
+                        <!-- Main Handle -->
+                        <div class="${handleColor} w-20 h-3 rounded-full shadow-lg relative" style="box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);">
+                            <!-- Handle Shine -->
+                            <div class="absolute top-0 left-2 right-2 h-1 bg-white/40 rounded-full"></div>
+                        </div>
+                    </div>
+                    <!-- Drawer Lines for Depth -->
+                    <div class="absolute inset-2 border border-gray-300/50 rounded-sm pointer-events-none"></div>
                 </div>
                 
-                <!-- Drawer 2 (Animated) -->
-                <div class="drawer-2 relative ${drawerColor} rounded-lg p-3 border-2 ${cabinetBorder} transition-all duration-700 shadow-inner">
-                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${handleColor} w-12 h-1.5 rounded-full shadow-md"></div>
+                <!-- Drawer 2 (Middle Drawer) -->
+                <div class="drawer-2 relative ${drawerColor} rounded-md p-4 mb-3 border-3 border-gray-400 transition-all duration-700 shadow-lg" style="box-shadow: inset 0 2px 8px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);">
+                    <!-- Drawer Handle -->
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <!-- Handle Mounting Screws -->
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -left-8 top-1/2 -translate-y-1/2"></div>
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -right-8 top-1/2 -translate-y-1/2"></div>
+                        <!-- Main Handle -->
+                        <div class="${handleColor} w-16 h-2.5 rounded-full shadow-lg relative" style="box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);">
+                            <!-- Handle Shine -->
+                            <div class="absolute top-0 left-2 right-2 h-0.5 bg-white/40 rounded-full"></div>
+                        </div>
+                    </div>
+                    <!-- Drawer Lines for Depth -->
+                    <div class="absolute inset-2 border border-gray-300/50 rounded-sm pointer-events-none"></div>
                 </div>
                 
-                <!-- File Count -->
-                <div class="flex items-center justify-center gap-2 mt-4 text-gray-700">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Drawer 3 (Bottom Drawer) -->
+                <div class="drawer-3 relative ${drawerColor} rounded-md p-4 mb-3 border-3 border-gray-400 transition-all duration-700 shadow-lg" style="box-shadow: inset 0 2px 8px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);">
+                    <!-- Drawer Handle -->
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <!-- Handle Mounting Screws -->
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -left-8 top-1/2 -translate-y-1/2"></div>
+                        <div class="w-1 h-1 rounded-full bg-gray-600 absolute -right-8 top-1/2 -translate-y-1/2"></div>
+                        <!-- Main Handle -->
+                        <div class="${handleColor} w-16 h-2.5 rounded-full shadow-lg relative" style="box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);">
+                            <!-- Handle Shine -->
+                            <div class="absolute top-0 left-2 right-2 h-0.5 bg-white/40 rounded-full"></div>
+                        </div>
+                    </div>
+                    <!-- Drawer Lines for Depth -->
+                    <div class="absolute inset-2 border border-gray-300/50 rounded-sm pointer-events-none"></div>
+                </div>
+                
+                <!-- Metal Bottom Trim -->
+                <div class="h-1 bg-gradient-to-t from-gray-400 to-gray-500 rounded-b-sm shadow-inner mb-2"></div>
+                
+                <!-- Cabinet Legs -->
+                <div class="flex justify-between px-4 -mb-2">
+                    <div class="w-3 h-4 bg-gradient-to-b from-gray-600 to-gray-800 rounded-b-sm shadow-md"></div>
+                    <div class="w-3 h-4 bg-gradient-to-b from-gray-600 to-gray-800 rounded-b-sm shadow-md"></div>
+                    <div class="w-3 h-4 bg-gradient-to-b from-gray-600 to-gray-800 rounded-b-sm shadow-md"></div>
+                    <div class="w-3 h-4 bg-gradient-to-b from-gray-600 to-gray-800 rounded-b-sm shadow-md"></div>
+                </div>
+                
+                <!-- File Count Badge -->
+                <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white border-2 ${cabinetBorder} rounded-full px-3 py-1 shadow-md flex items-center gap-2">
+                    <svg class="w-4 h-4 ${cabinet.status === 'archived' ? 'text-gray-600' : 'text-gray-700'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-sm font-semibold">${fileCount} Document${fileCount !== 1 ? 's' : ''}</span>
+                    <span class="text-xs font-bold ${cabinet.status === 'archived' ? 'text-gray-700' : 'text-gray-800'}">${fileCount} Document${fileCount !== 1 ? 's' : ''}</span>
                 </div>
             </div>
             
-            <!-- Click hint (appears on hover, only when not editing) -->
-            <div class="click-hint absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-300 flex items-center justify-center pointer-events-none rounded-xl">
-                <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 ${hoverHintBg} ${hoverHintText} px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Click hint (appears on hover at bottom, only when not editing) -->
+            <div class="click-hint absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-300 flex items-end justify-center pb-4 pointer-events-none rounded-xl">
+                <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 ${hoverHintBg} ${hoverHintText} px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
                     </svg>
-                    <span class="text-xs font-medium">Click to Open</span>
+                    <span class="text-sm font-semibold">Click to Open Cabinet</span>
                 </div>
             </div>
         </div>
@@ -1633,25 +1691,47 @@ function openCabinetWithAnimation(cabinetId, cabinetElement) {
     // Disable pointer events to prevent multiple clicks
     cabinetElement.style.pointerEvents = 'none';
     
-    // Get main drawer and cabinet body
+    // Get drawers and cabinet body
     const drawer1 = cabinetElement.querySelector('.drawer-1');
+    const drawer2 = cabinetElement.querySelector('.drawer-2');
+    const drawer3 = cabinetElement.querySelector('.drawer-3');
     const cabinetBody = cabinetElement.querySelector('.cabinet-body');
     
-    // Open main drawer (pulls forward towards viewer smoothly)
+    // Open top drawer first (pulls forward towards viewer smoothly)
     setTimeout(() => {
-        drawer1.style.transform = 'translateZ(50px) scale(1.08)';
-        drawer1.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.35)';
-        drawer1.style.zIndex = '10';
-    }, 150);
+        if (drawer1) {
+            drawer1.style.transform = 'translateZ(50px) translateY(-5px) scale(1.05)';
+            drawer1.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.35)';
+            drawer1.style.zIndex = '10';
+        }
+    }, 100);
+    
+    // Open middle drawer slightly
+    setTimeout(() => {
+        if (drawer2) {
+            drawer2.style.transform = 'translateZ(30px) scale(1.03)';
+            drawer2.style.boxShadow = '0 15px 30px rgba(0, 0, 0, 0.25)';
+            drawer2.style.zIndex = '9';
+        }
+    }, 250);
+    
+    // Open bottom drawer slightly
+    setTimeout(() => {
+        if (drawer3) {
+            drawer3.style.transform = 'translateZ(20px) scale(1.02)';
+            drawer3.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.2)';
+            drawer3.style.zIndex = '8';
+        }
+    }, 400);
     
     // Subtle cabinet body background fade
     setTimeout(() => {
         if (cabinetBody) {
             cabinetBody.style.opacity = '0.85';
         }
-    }, 250);
+    }, 350);
     
-    // After drawer opens, fade out entire card
+    // After drawers open, fade out entire card
     setTimeout(() => {
         cabinetElement.style.transform = 'scale(0.95)';
         cabinetElement.style.opacity = '0';

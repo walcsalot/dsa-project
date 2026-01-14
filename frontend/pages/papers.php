@@ -116,7 +116,7 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
             
             <!-- Header -->
             <header id="mainHeader" class="bg-transparent shadow-sm border-b border-gray-200">
-                <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
                     <!-- Page Title -->
                     <h2 class="text-xl font-semibold text-gray-800">Cabinets Management</h2>
                     
@@ -174,9 +174,9 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
             </header>
             
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+            <main class="flex-1 overflow-y-auto p-4 sm:p-4 lg:p-6 bg-gray-50">
                 <!-- Filters and Search -->
-                <div id="filtersSection" class="mb-6">
+                <div id="filtersSection" class="mb-4">
                     <div class="flex flex-col md:flex-row gap-4 items-center justify-between flex-wrap">
                         <div id="searchBarContainer" class="relative flex-1 w-full md:w-auto invisible">
                             <input type="text" id="searchPapersInput" placeholder="Search papers..." 
@@ -356,7 +356,7 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                 </div>
                 
                 <!-- Cabinets Grid -->
-                <div id="cabinetsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                <div id="cabinetsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Cabinets will be dynamically loaded via JavaScript -->
                     <!-- Example Cabinet Card Structure (for reference):
                     <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
