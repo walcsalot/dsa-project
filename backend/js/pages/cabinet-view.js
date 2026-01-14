@@ -455,17 +455,54 @@ export function showAddDocumentModal() {
         }
     }).then(async (result) => {
         if (result.isConfirmed && result.value) {
-            // Get current cabinet ID
-            const selectedCabinetName = document.getElementById('selectedCabinetName');
-            const cabinetDropdownText = document.getElementById('cabinetDropdownText');
-            
+            // Get current cabinet ID using multiple methods for reliability
             let cabinetId = null;
             
-            // Try to get cabinet ID from view button
-            if (cabinetDropdownText && cabinetDropdownText.textContent.trim() !== 'Select Cabinet' && cabinetDropdownText.textContent.trim() !== 'All Cabinets') {
-                const viewBtn = document.querySelector(`.view-papers-btn[data-cabinet-name="${cabinetDropdownText.textContent.trim()}"]`);
-                if (viewBtn) {
-                    cabinetId = viewBtn.getAttribute('data-cabinet-id');
+            // Method 1: Check URL parameter (most reliable - set when cabinet is selected)
+            const urlParams = new URLSearchParams(window.location.search);
+            const cabinetIdFromUrl = urlParams.get('cabinet_id');
+            if (cabinetIdFromUrl) {
+                cabinetId = parseInt(cabinetIdFromUrl, 10);
+            }
+            
+            // Method 2: Get from cabinet dropdown option's data-cabinet-id attribute
+            if (!cabinetId) {
+                const cabinetDropdownText = document.getElementById('cabinetDropdownText');
+                const cabinetDropdown = document.getElementById('cabinetDropdown');
+                
+                if (cabinetDropdownText && cabinetDropdown && 
+                    cabinetDropdownText.textContent.trim() !== 'Select Cabinet' && 
+                    cabinetDropdownText.textContent.trim() !== 'All Cabinets') {
+                    
+                    const selectedText = cabinetDropdownText.textContent.trim();
+                    
+                    // Find the matching option in the dropdown
+                    const options = cabinetDropdown.querySelectorAll('button[data-cabinet-id]');
+                    for (const option of options) {
+                        if (option.textContent.trim() === selectedText) {
+                            cabinetId = parseInt(option.getAttribute('data-cabinet-id'), 10);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Method 3: Try to get from selectedCabinetName and match with dropdown
+            if (!cabinetId) {
+                const selectedCabinetName = document.getElementById('selectedCabinetName');
+                const cabinetDropdown = document.getElementById('cabinetDropdown');
+                
+                if (selectedCabinetName && cabinetDropdown) {
+                    const selectedText = selectedCabinetName.textContent.trim();
+                    
+                    // Find the matching option in the dropdown
+                    const options = cabinetDropdown.querySelectorAll('button[data-cabinet-id]');
+                    for (const option of options) {
+                        if (option.textContent.trim() === selectedText) {
+                            cabinetId = parseInt(option.getAttribute('data-cabinet-id'), 10);
+                            break;
+                        }
+                    }
                 }
             }
             
