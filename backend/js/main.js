@@ -7,6 +7,15 @@ import { initCabinetView } from './pages/cabinet-view.js';
 import { initSidebar, restoreNavigationState } from './modules/sidebar.js';
 import { initProfileDropdown, initLogout } from './pages/dashboard.js';
 
+// Mark page as loaded immediately (prevent FOUC)
+function markPageLoaded() {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            document.body.classList.add('loaded');
+        });
+    });
+}
+
 // Initialize based on page
 document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname;
@@ -19,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(loginForm);
             await processLogin(formData);
         });
+        // Mark login page as loaded
+        markPageLoaded();
         return; // Don't initialize other functionality on login page
     }
     
@@ -26,8 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasSidebar = document.getElementById('sidebar');
     
     if (hasSidebar) {
+        // Always initialize sidebar first for any page with a sidebar
+        initSidebar();
+        
         // Restore navigation state (scroll position, etc.)
         restoreNavigationState();
+        
+        // Initialize profile dropdown and logout for all frontend pages
+        initProfileDropdown();
+        initLogout();
         
         // Specific page handlers - these pages have their own init functions
         if (currentPath.includes('/pages/cabinets/view.php')) {
@@ -38,14 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         else if (currentPath.includes('/dashboard.php')) {
             initDashboard();
-        }
-        // Auto-initialize for any other frontend PHP file with sidebar
-        // This includes template.php and any future pages
-        else if (currentPath.includes('/frontend/')) {
-            // Initialize basic functionality (sidebar, profile, logout) for any frontend page
-            initSidebar();
-            initProfileDropdown();
-            initLogout();
         }
     }
 });

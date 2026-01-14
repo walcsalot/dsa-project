@@ -8,7 +8,35 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabinets - DSA Project</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Cabinets - DSA Project (v2.0)</title>
+    
+    <!-- Inline critical CSS to prevent FOUC -->
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        body {
+            opacity: 0;
+            transition: opacity 0.15s ease-in;
+        }
+        body.loaded {
+            opacity: 1;
+        }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        #sidebar {
+            position: relative;
+        }
+    </style>
+    
     <?php if ($isDev): ?>
         <!-- Vite HMR Client - Must be loaded first for auto-refresh -->
         <script type="module">
@@ -147,15 +175,9 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
             
             <!-- Main Content -->
             <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-                <!-- Page Header -->
-                <div id="pageHeader" class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Cabinets</h1>
-                    <p class="text-gray-600">Manage and organize your cabinets. Each cabinet contains papers with unique names and information.</p>
-                </div>
-                
                 <!-- Filters and Search -->
-                <div id="filtersSection" class="p-6 mb-6">
-                    <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div id="filtersSection" class="mb-6">
+                    <div class="flex flex-col md:flex-row gap-4 items-center justify-between flex-wrap">
                         <div id="searchBarContainer" class="relative flex-1 w-full md:w-auto invisible">
                             <input type="text" id="searchPapersInput" placeholder="Search papers..." 
                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none text-sm">
@@ -165,7 +187,7 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                         </div>
                         
                         <!-- Filter Buttons -->
-                        <div class="flex gap-2 ml-auto">
+                        <div class="flex flex-wrap gap-2 ml-auto">
                             <!-- Cabinet Dropdown -->
                             <div class="relative">
                                 <button id="cabinetDropdownBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer flex items-center gap-2">
@@ -180,70 +202,33 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                                     <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-cabinet="all">
                                         All Cabinets
                                     </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-cabinet="C1.1">
-                                        Cabinet 1
-                                    </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-cabinet="C2.1">
-                                        Cabinet 2
-                                    </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-cabinet="C3.1">
-                                        Cabinet 3
-                                    </button>
+                                    <!-- Dynamically populated via JavaScript -->
                                 </div>
                             </div>
                             
-                            <!-- File Category Dropdown -->
-                            <div class="relative">
-                                <button id="fileCategoryDropdownBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer flex items-center gap-2">
-                                    <span id="fileCategoryDropdownText">File Category</span>
-                                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                                
-                                <!-- File Category Dropdown Menu -->
-                                <div id="fileCategoryDropdown" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-category="all">
-                                        All Categories
-                                    </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-category="documents">
-                                        Documents
-                                    </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-category="sports">
-                                        Sports
-                                    </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-category="objects">
-                                        Objects
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer">
-                                Recent
-                            </button>
-                            
-                            <!-- Status Dropdown -->
+                            <!-- Status Dropdown - Updated v2.0 with Archive Support -->
                             <div class="relative">
                                 <button id="statusDropdownBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer flex items-center gap-2">
-                                    <span id="statusDropdownText">Archived List</span>
+                                    <span id="statusDropdownText">All Cabinets</span>
                                     <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                                 
-                                <!-- Status Dropdown Menu -->
-                                <div id="statusDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="archived">
-                                        Archived List
+                                <!-- Status Dropdown Menu - INCLUDES ARCHIVED OPTION -->
+                                <div id="statusDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-64 overflow-y-auto">
+                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium" data-status="all">
+                                        📋 All Cabinets
                                     </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="available">
-                                        Available
+                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="active">
+                                        ✓ Active
                                     </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="borrow">
-                                        Borrow List
+                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="pending">
+                                        ⏳ Pending
                                     </button>
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700" data-status="uses">
-                                        Uses List
+                                    <div class="border-t border-gray-200 my-1"></div>
+                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium" data-status="archived">
+                                        📦 Archived
                                     </button>
                                 </div>
                             </div>
@@ -260,9 +245,16 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
                             </button>
-                            <div>
-                                <h2 id="selectedCabinetName" class="text-2xl font-bold text-gray-800"></h2>
-                                <p class="text-gray-600">View and manage documents in this cabinet</p>
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <h2 id="selectedCabinetName" class="text-2xl font-bold text-gray-800"></h2>
+                                    <p class="text-gray-600">View and manage documents in this cabinet</p>
+                                </div>
+                                <button id="editSelectedCabinetBtn" class="p-2 rounded-lg hover:bg-gray-100 transition-colors group" title="Edit Cabinet">
+                                    <svg class="w-5 h-5 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         <button id="addDocumentBtn" class="bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-[#700000] transition-colors flex items-center gap-2 cursor-pointer">
@@ -314,6 +306,39 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                                 </thead>
                                 <tbody id="documentsTableBody" class="bg-white divide-y divide-gray-200">
                                     <!-- Documents will be dynamically generated via JavaScript based on selected cabinet -->
+                                    <!-- Example Document Row Structure (for reference):
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">C1.1</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Document Name</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Category Name</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Admin User</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Available</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                            <div class="flex items-center gap-2">
+                                                <button class="edit-document-btn p-1.5 rounded-lg hover:bg-gray-100 transition-colors group" data-document-id="1" title="Edit Document">
+                                                    <svg class="w-4 h-4 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="view-document-btn p-1.5 rounded-lg hover:bg-gray-100 transition-colors group" data-document-id="1" title="View Details">
+                                                    <svg class="w-4 h-4 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="delete-document-btn p-1.5 rounded-lg hover:bg-red-50 transition-colors group" data-document-id="1" title="Delete Document">
+                                                    <svg class="w-4 h-4 text-gray-400 group-hover:text-red-600 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    -->
+                                    
                                     <!-- Empty State (will be shown when no documents) -->
                                     <tr id="emptyStateRow" class="hidden">
                                         <td colspan="7" class="px-6 py-12 text-center">
@@ -331,8 +356,32 @@ $isDev = !file_exists(__DIR__ . '/../../dist/index.php');
                 </div>
                 
                 <!-- Cabinets Grid -->
-                <div id="cabinetsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div id="cabinetsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
                     <!-- Cabinets will be dynamically loaded via JavaScript -->
+                    <!-- Example Cabinet Card Structure (for reference):
+                    <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-800">Cabinet Name</h3>
+                                    <p class="text-sm text-gray-500 mt-1">Description</p>
+                                </div>
+                                <button class="edit-cabinet-btn p-2 rounded-lg hover:bg-gray-100 transition-colors group" data-cabinet-id="1" title="Edit Cabinet">
+                                    <svg class="w-5 h-5 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">0 documents</span>
+                                <button class="view-cabinet-btn text-[#800000] hover:text-[#600000] font-medium cursor-pointer" data-cabinet-id="1">
+                                    View Details →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    -->
+                    
                     <!-- Empty State (shown when no cabinets) -->
                     <div id="emptyCabinetsState" class="hidden col-span-full text-center py-12">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

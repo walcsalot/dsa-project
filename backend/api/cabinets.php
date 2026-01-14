@@ -71,15 +71,32 @@ try {
                 }
             } else {
                 // Get all cabinets with file counts
-                $stmt = $conn->prepare("
-                    SELECT c.*, 
-                           COUNT(DISTINCT f.id) as file_count
-                    FROM cabinets c
-                    LEFT JOIN files f ON c.id = f.cabinet_id AND f.deleted_at IS NULL
-                    WHERE c.status != 'archived' OR c.status IS NULL
-                    GROUP BY c.id
-                    ORDER BY c.position ASC, c.created_at ASC
-                ");
+                // Check if we should include archived cabinets
+                $includeArchived = isset($_GET['include_archived']) && $_GET['include_archived'] === 'true';
+                
+                if ($includeArchived) {
+                    // Get all cabinets including archived
+                    $stmt = $conn->prepare("
+                        SELECT c.*, 
+                               COUNT(DISTINCT f.id) as file_count
+                        FROM cabinets c
+                        LEFT JOIN files f ON c.id = f.cabinet_id AND f.deleted_at IS NULL
+                        GROUP BY c.id
+                        ORDER BY c.position ASC, c.created_at ASC
+                    ");
+                } else {
+                    // Get only non-archived cabinets
+                    $stmt = $conn->prepare("
+                        SELECT c.*, 
+                               COUNT(DISTINCT f.id) as file_count
+                        FROM cabinets c
+                        LEFT JOIN files f ON c.id = f.cabinet_id AND f.deleted_at IS NULL
+                        WHERE c.status != 'archived' OR c.status IS NULL
+                        GROUP BY c.id
+                        ORDER BY c.position ASC, c.created_at ASC
+                    ");
+                }
+                
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $cabinets = [];

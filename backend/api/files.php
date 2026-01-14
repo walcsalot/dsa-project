@@ -79,6 +79,7 @@ try {
             $cabinetId = isset($_GET['cabinet_id']) ? intval($_GET['cabinet_id']) : null;
             $fileId = isset($_GET['id']) ? intval($_GET['id']) : null;
             $search = isset($_GET['search']) ? trim($_GET['search']) : null;
+            $status = isset($_GET['status']) ? trim($_GET['status']) : null;
             
             if ($fileId) {
                 // Get single file
@@ -109,6 +110,13 @@ try {
                 
                 $params = [$cabinetId];
                 $types = 'i';
+                
+                // Add status filter if provided
+                if ($status && in_array($status, ['available', 'borrowed', 'archived'])) {
+                    $sql .= " AND f.status = ?";
+                    $params[] = $status;
+                    $types .= 's';
+                }
                 
                 if ($search) {
                     $sql .= " AND (f.cabinet_number LIKE ? OR f.filename LIKE ?)";

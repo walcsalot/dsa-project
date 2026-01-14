@@ -9,6 +9,31 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Management - DSA Project</title>
+    
+    <!-- Inline critical CSS to prevent FOUC -->
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        body {
+            opacity: 0;
+            transition: opacity 0.15s ease-in;
+        }
+        body.loaded {
+            opacity: 1;
+        }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        #sidebar {
+            position: relative;
+        }
+    </style>
+    
     <?php if ($isDev): ?>
         <!-- Vite HMR Client - Must be loaded first for auto-refresh -->
         <script type="module">
@@ -154,7 +179,7 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Total Documents</p>
-                                <p class="text-2xl font-bold text-gray-800 mt-1">1,234</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1" id="totalDocuments">0</p>
                             </div>
                             <div class="w-12 h-12 bg-[#800000]/10 rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,8 +194,8 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                     <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-[#800000]">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600">Total Papers</p>
-                                <p class="text-2xl font-bold text-gray-800 mt-1">856</p>
+                                <p class="text-sm text-gray-600">Total Cabinets</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1" id="totalCabinets">0</p>
                             </div>
                             <div class="w-12 h-12 bg-[#800000]/10 rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +211,7 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Pending Review</p>
-                                <p class="text-2xl font-bold text-gray-800 mt-1">45</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1" id="pendingCabinets">0</p>
                             </div>
                             <div class="w-12 h-12 bg-[#800000]/10 rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +227,7 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Archived</p>
-                                <p class="text-2xl font-bold text-gray-800 mt-1">378</p>
+                                <p class="text-2xl font-bold text-gray-800 mt-1" id="archivedFiles">0</p>
                             </div>
                             <div class="w-12 h-12 bg-[#800000]/10 rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,32 +248,32 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                             <!-- Pie Chart Placeholder -->
                             <div class="relative w-48 h-48">
                                 <!-- Pie Chart SVG -->
-                                <svg class="transform -rotate-90 w-full h-full" viewBox="0 0 100 100">
-                                    <!-- Documents (60%) -->
-                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#800000" stroke-width="20" 
-                                            stroke-dasharray="251.2 418.67" stroke-dashoffset="0" />
-                                    <!-- Papers (40%) -->
-                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#d4a574" stroke-width="20" 
-                                            stroke-dasharray="167.47 418.67" stroke-dashoffset="-251.2" />
+                                <svg class="transform -rotate-90 w-full h-full" viewBox="0 0 100 100" id="pieChartSvg">
+                                    <!-- Documents -->
+                                    <circle id="pieChartDocumentsCircle" cx="50" cy="50" r="40" fill="none" stroke="#800000" stroke-width="20" 
+                                            stroke-dasharray="0 0" stroke-dashoffset="0" />
+                                    <!-- Others -->
+                                    <circle id="pieChartOthersCircle" cx="50" cy="50" r="40" fill="none" stroke="#d4a574" stroke-width="20" 
+                                            stroke-dasharray="0 0" stroke-dashoffset="0" />
                                 </svg>
                                 <!-- Center Text -->
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div class="text-center">
-                                        <p class="text-2xl font-bold text-gray-800">2,090</p>
+                                        <p class="text-2xl font-bold text-gray-800" id="pieChartTotal">0</p>
                                         <p class="text-xs text-gray-600">Total Items</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <!-- Legend -->
-                        <div class="flex justify-center gap-6 mt-4">
+                        <div class="flex justify-center gap-6 mt-4 flex-wrap">
                             <div class="flex items-center gap-2">
                                 <div class="w-4 h-4 rounded-full bg-[#800000]"></div>
-                                <span class="text-sm text-gray-700">Documents (60%)</span>
+                                <span class="text-sm text-gray-700"><span id="pieChartDocumentsLabel">Documents</span> (<span id="pieChartDocumentsPercent">0</span>%)</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div class="w-4 h-4 rounded-full bg-[#d4a574]"></div>
-                                <span class="text-sm text-gray-700">Papers (40%)</span>
+                                <span class="text-sm text-gray-700"><span id="pieChartOthersLabel">Others</span> (<span id="pieChartOthersPercent">0</span>%)</span>
                             </div>
                         </div>
                     </div>
@@ -262,29 +287,29 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                                 <div class="space-y-3">
                                     <div>
                                         <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>Active Documents</span>
-                                            <span>1,234</span>
+                                            <span>Available</span>
+                                            <span id="barChartAvailableCount">0</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-4">
-                                            <div class="bg-[#800000] h-4 rounded-full" style="width: 85%"></div>
+                                            <div id="barChartAvailableBar" class="bg-[#800000] h-4 rounded-full" style="width: 0%"></div>
                                         </div>
                                     </div>
                                     <div>
                                         <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>Pending Review</span>
-                                            <span>45</span>
+                                            <span>Borrowed</span>
+                                            <span id="barChartBorrowedCount">0</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-4">
-                                            <div class="bg-orange-500 h-4 rounded-full" style="width: 15%"></div>
+                                            <div id="barChartBorrowedBar" class="bg-orange-500 h-4 rounded-full" style="width: 0%"></div>
                                         </div>
                                     </div>
                                     <div>
                                         <div class="flex justify-between text-sm text-gray-600 mb-1">
                                             <span>Archived</span>
-                                            <span>378</span>
+                                            <span id="barChartArchivedCount">0</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-4">
-                                            <div class="bg-gray-400 h-4 rounded-full" style="width: 25%"></div>
+                                            <div id="barChartArchivedBar" class="bg-gray-400 h-4 rounded-full" style="width: 0%"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -300,7 +325,7 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                         <!-- Search Bar -->
                         <div class="flex items-center gap-2">
                             <div class="relative">
-                                <input type="text" placeholder="Search documents..." 
+                                <input type="text" id="dashboardSearchInput" placeholder="Search documents..." 
                                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none text-sm">
                                 <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -317,46 +342,10 @@ $isDev = !file_exists(__DIR__ . '/../dist/index.php');
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date Added</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-800">Research Paper 2024</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Paper</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Research</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">2024-01-15</td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Active</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <button class="text-[#800000] hover:text-[#700000] text-sm">View</button>
-                                    </td>
-                                </tr>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-800">Meeting Minutes Q1</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Document</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Meeting</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">2024-01-14</td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Pending</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <button class="text-[#800000] hover:text-[#700000] text-sm">View</button>
-                                    </td>
-                                </tr>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-800">Project Proposal</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Document</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Project</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">2024-01-13</td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Active</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <button class="text-[#800000] hover:text-[#700000] text-sm">View</button>
-                                    </td>
-                                </tr>
+                            <tbody id="recentDocumentsTableBody" class="divide-y divide-gray-200">
+                                <!-- Recent documents will be dynamically loaded via JavaScript -->
                             </tbody>
                         </table>
                     </div>

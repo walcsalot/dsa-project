@@ -22,8 +22,58 @@ export function initCabinetView() {
     // Initialize document management
     initDocumentManagement();
     
-    // Initialize cabinet number sort dropdown
+    // Initialize all filter dropdowns
     initCabinetNumberSort();
+    initCategorySort();
+    initStatusSort();
+    
+    // Initialize search functionality
+    initSearchFunctionality();
+    
+    // Load documents from API based on query parameter
+    loadDocumentsFromQuery();
+}
+
+/**
+ * Load documents from API based on URL query parameter
+ */
+async function loadDocumentsFromQuery() {
+    // Get cabinet_id from URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const cabinetId = urlParams.get('cabinet_id');
+    
+    if (cabinetId) {
+        const numericCabinetId = parseInt(cabinetId, 10);
+        if (!isNaN(numericCabinetId)) {
+            // Fetch cabinet info to display cabinet name
+            try {
+                const cabinetResponse = await fetch('/backend/api/cabinets.php');
+                const cabinetResult = await cabinetResponse.json();
+                
+                if (cabinetResult.success && cabinetResult.data) {
+                    const cabinet = cabinetResult.data.find(c => c.id === numericCabinetId);
+                    if (cabinet) {
+                        // Update page title
+                        const pageTitle = document.querySelector('title');
+                        if (pageTitle) {
+                            pageTitle.textContent = `${cabinet.name || 'Cabinet ' + numericCabinetId} - DSA Project`;
+                        }
+                        
+                        // Update cabinet view title if it exists (for view.php)
+                        const cabinetViewTitle = document.getElementById('cabinetViewTitle');
+                        if (cabinetViewTitle) {
+                            cabinetViewTitle.textContent = cabinet.name || 'Cabinet ' + numericCabinetId;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching cabinet info:', error);
+            }
+            
+            // Load documents for this cabinet
+            await reloadDocumentsForCabinet(numericCabinetId);
+        }
+    }
 }
 
 /**
@@ -42,6 +92,14 @@ export function initDocumentManagement() {
     updateDocumentCount();
 }
 
+// Store current filter state
+let currentFilters = {
+    cabinetNumber: 'all',
+    category: 'all',
+    status: 'all',
+    searchTerm: ''
+};
+
 /**
  * Initialize cabinet number sort dropdown functionality
  * This allows sorting/filtering documents by cabinet number in the cabinet view page
@@ -57,26 +115,137 @@ function initCabinetNumberSort() {
     sortBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         sortDropdown.classList.toggle('hidden');
+        
+        // Close other dropdowns
+        document.getElementById('categorySortDropdown')?.classList.add('hidden');
+        document.getElementById('statusSortDropdown')?.classList.add('hidden');
     });
     
-    // Handle cabinet number selection
-    const sortOptions = sortDropdown.querySelectorAll('button[data-cabinet-number]');
-    sortOptions.forEach(option => {
+    // Handle cabinet number selection with event delegation
+    sortDropdown.addEventListener('click', (e) => {
+        const option = e.target.closest('button[data-cabinet-number]');
+        if (!option) return;
+        
+        e.stopPropagation();
+        const cabinetNumber = option.getAttribute('data-cabinet-number');
+        const optionText = option.textContent.trim();
+        
+        // Update button text
+        if (sortText) {
+            sortText.textContent = cabinetNumber === 'all' ? 'All Numbers' : optionText;
+        }
+        
+        // Close dropdown
+        sortDropdown.classList.add('hidden');
+        
+        // Update filter state
+        currentFilters.cabinetNumber = cabinetNumber;
+        
+        // Apply all filters
+        applyAllFilters();
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (sortBtn && !sortBtn.contains(e.target) && sortDropdown && !sortDropdown.contains(e.target)) {
+            sortDropdown.classList.add('hidden');
+        }
+    });
+}
+
+/**
+ * Initialize category sort dropdown functionality
+ */
+function initCategorySort() {
+    const sortBtn = document.getElementById('categorySortBtn');
+    const sortDropdown = document.getElementById('categorySortDropdown');
+    const sortText = document.getElementById('categorySortText');
+    
+    if (!sortBtn || !sortDropdown) return;
+    
+    // Toggle dropdown
+    sortBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortDropdown.classList.toggle('hidden');
+        
+        // Close other dropdowns
+        document.getElementById('cabinetNumberSortDropdown')?.classList.add('hidden');
+        document.getElementById('statusSortDropdown')?.classList.add('hidden');
+    });
+    
+    // Handle category selection with event delegation
+    sortDropdown.addEventListener('click', (e) => {
+        const option = e.target.closest('button[data-category]');
+        if (!option) return;
+        
+        e.stopPropagation();
+        const category = option.getAttribute('data-category');
+        const optionText = option.textContent.trim();
+        
+        // Update button text
+        if (sortText) {
+            sortText.textContent = category === 'all' ? 'All Categories' : optionText;
+        }
+        
+        // Close dropdown
+        sortDropdown.classList.add('hidden');
+        
+        // Update filter state
+        currentFilters.category = category;
+        
+        // Apply all filters
+        applyAllFilters();
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (sortBtn && !sortBtn.contains(e.target) && sortDropdown && !sortDropdown.contains(e.target)) {
+            sortDropdown.classList.add('hidden');
+        }
+    });
+}
+
+/**
+ * Initialize status sort dropdown functionality
+ */
+function initStatusSort() {
+    const sortBtn = document.getElementById('statusSortBtn');
+    const sortDropdown = document.getElementById('statusSortDropdown');
+    const sortText = document.getElementById('statusSortText');
+    
+    if (!sortBtn || !sortDropdown) return;
+    
+    // Toggle dropdown
+    sortBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortDropdown.classList.toggle('hidden');
+        
+        // Close other dropdowns
+        document.getElementById('cabinetNumberSortDropdown')?.classList.add('hidden');
+        document.getElementById('categorySortDropdown')?.classList.add('hidden');
+    });
+    
+    // Handle status selection
+    const statusOptions = sortDropdown.querySelectorAll('button[data-status]');
+    statusOptions.forEach(option => {
         option.addEventListener('click', (e) => {
             e.stopPropagation();
-            const cabinetNumber = option.getAttribute('data-cabinet-number');
+            const status = option.getAttribute('data-status');
             const optionText = option.textContent.trim();
             
             // Update button text
             if (sortText) {
-                sortText.textContent = optionText;
+                sortText.textContent = status === 'all' ? 'All Status' : optionText;
             }
             
             // Close dropdown
             sortDropdown.classList.add('hidden');
             
-            // Sort/filter documents by cabinet number
-            sortDocumentsByCabinetNumber(cabinetNumber);
+            // Update filter state
+            currentFilters.status = status;
+            
+            // Apply all filters
+            applyAllFilters();
         });
     });
     
@@ -89,33 +258,74 @@ function initCabinetNumberSort() {
 }
 
 /**
- * Sort/filter documents by cabinet number
- * This function filters the documents table to show only documents with the specified cabinet number
- * @param {string} cabinetNumber - Cabinet number to filter by (e.g., 'C1.1', 'C1.2', 'C1.3', or 'all')
+ * Apply all filters (cabinet number, category, status, search) to the documents table
  */
-function sortDocumentsByCabinetNumber(cabinetNumber) {
+function applyAllFilters() {
     const tableBody = document.getElementById('documentsTableBody');
     if (!tableBody) return;
     
-    // Get all document rows (excluding empty state row)
     const rows = tableBody.querySelectorAll('tr:not(#emptyStateRow)');
     const emptyStateRow = document.getElementById('emptyStateRow');
     
     let visibleCount = 0;
     
     rows.forEach(row => {
-        // Get the cabinet number from the second column (Cabinet Number column)
-        const cabinetNumberCell = row.querySelector('td:nth-child(2)');
-        if (cabinetNumberCell) {
-            const cellText = cabinetNumberCell.textContent.trim();
-            
-            // Show or hide row based on filter
-            if (cabinetNumber === 'all' || cellText === cabinetNumber) {
-                row.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                row.classList.add('hidden');
+        let isVisible = true;
+        
+        // Filter by cabinet number
+        if (currentFilters.cabinetNumber !== 'all') {
+            const cabinetNumberCell = row.querySelector('td:nth-child(2)');
+            if (cabinetNumberCell) {
+                const cellText = cabinetNumberCell.textContent.trim();
+                if (cellText !== currentFilters.cabinetNumber) {
+                    isVisible = false;
+                }
             }
+        }
+        
+        // Filter by category
+        if (isVisible && currentFilters.category !== 'all') {
+            const categoryCell = row.querySelector('td:nth-child(4)');
+            if (categoryCell) {
+                const categoryText = categoryCell.textContent.trim().toLowerCase();
+                if (categoryText !== currentFilters.category.toLowerCase()) {
+                    isVisible = false;
+                }
+            }
+        }
+        
+        // Filter by status
+        if (isVisible && currentFilters.status !== 'all') {
+            const statusCell = row.querySelector('td:nth-child(6)');
+            if (statusCell) {
+                const statusText = statusCell.textContent.trim().toLowerCase();
+                if (statusText !== currentFilters.status.toLowerCase()) {
+                    isVisible = false;
+                }
+            }
+        }
+        
+        // Filter by search term
+        if (isVisible && currentFilters.searchTerm) {
+            const fileNameCell = row.querySelector('td:nth-child(3)');
+            const categoryCell = row.querySelector('td:nth-child(4)');
+            
+            if (fileNameCell && categoryCell) {
+                const fileName = fileNameCell.textContent.toLowerCase();
+                const category = categoryCell.textContent.toLowerCase();
+                
+                if (!fileName.includes(currentFilters.searchTerm) && !category.includes(currentFilters.searchTerm)) {
+                    isVisible = false;
+                }
+            }
+        }
+        
+        // Show or hide row
+        if (isVisible) {
+            row.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            row.classList.add('hidden');
         }
     });
     
@@ -133,11 +343,6 @@ function sortDocumentsByCabinetNumber(cabinetNumber) {
     
     // Update document count
     updateDocumentCount();
-    
-    // TODO: Backend implementation - Sort documents by cabinet number
-    // When a cabinet number is selected, the backend should filter/sort documents
-    // Example SQL: SELECT * FROM documents WHERE cabinet_number = 'C1.1' ORDER BY created_at DESC
-    console.log('Sorting documents by cabinet number:', cabinetNumber);
 }
 
 /**
@@ -571,25 +776,62 @@ async function reloadDocumentsForCabinet(cabinetId) {
                     tableBody.appendChild(row);
                 });
                 
-                // Initialize action buttons
-                if (typeof initDocumentActionButtons === 'function') {
-                    initDocumentActionButtons();
-                }
+                // Initialize action buttons using event delegation
+                initDocumentActionButtonsDelegated();
             }
             
             // Update document count
             updateDocumentCount();
             
-            // Update Cabinet Number filter dropdown
-            const prefixMatch = String(cabinetId).match(/^(C\d+)\./);
-            const cabinetPrefix = prefixMatch ? prefixMatch[1] : 'C' + cabinetId;
-            if (typeof populateCabinetNumberFilter === 'function') {
-                populateCabinetNumberFilter(cabinetPrefix);
-            }
+            // Extract unique cabinet numbers from API response
+            const uniqueCabinetNumbers = [...new Set(result.data.map(doc => doc.cabinet_number).filter(Boolean))].sort((a, b) => {
+                const numA = parseInt(a.split('.')[1], 10);
+                const numB = parseInt(b.split('.')[1], 10);
+                return numA - numB;
+            });
+            
+            // Update Cabinet Number filter dropdown with numbers from API
+            populateCabinetNumberDropdown(uniqueCabinetNumbers);
+            
+            // Extract unique categories from API response
+            const uniqueCategories = [...new Set(result.data.map(doc => doc.category).filter(Boolean))].sort();
+            
+            // Update Category filter dropdown
+            populateCategoryDropdown(uniqueCategories);
         }
     } catch (error) {
         console.error('Error reloading documents:', error);
     }
+}
+
+/**
+ * Populate cabinet number dropdown dynamically
+ * @param {Array} cabinetNumbers - Array of unique cabinet numbers
+ */
+function populateCabinetNumberDropdown(cabinetNumbers) {
+    const dropdown = document.getElementById('cabinetNumberSortDropdown');
+    if (!dropdown) return;
+    
+    // Clear existing options
+    dropdown.innerHTML = '';
+    
+    // Add "All Cabinet Numbers" option
+    const allOption = document.createElement('button');
+    allOption.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+    allOption.setAttribute('data-cabinet-number', 'all');
+    allOption.textContent = 'All Cabinet Numbers';
+    dropdown.appendChild(allOption);
+    
+    // Add each unique cabinet number
+    cabinetNumbers.forEach(number => {
+        if (number) {
+            const button = document.createElement('button');
+            button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+            button.setAttribute('data-cabinet-number', number);
+            button.textContent = number;
+            dropdown.appendChild(button);
+        }
+    });
 }
 
 /**
@@ -636,23 +878,29 @@ function createDocumentRowFromAPI(doc, rowNumber) {
             <span class="px-2 py-1 text-xs rounded-full ${categoryBadgeClass}">${doc.category || 'Documents'}</span>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
-            <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-[#800000] flex items-center justify-center text-white font-semibold text-xs mr-2">
-                    ${(doc.added_by || 'A').charAt(0).toUpperCase()}
-                </div>
-                <span class="text-sm text-gray-900">${doc.added_by || 'Admin'}</span>
-            </div>
+            <span class="text-sm text-gray-900">${doc.added_by || 'Admin'}</span>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
             <span class="px-2 py-1 text-xs rounded-full ${statusBadgeClass}">${statusText}</span>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <td class="px-6 py-4 whitespace-nowrap text-sm">
             <div class="flex items-center gap-2">
-                <button class="view-file-btn text-[#800000] hover:text-[#700000] hover:underline cursor-pointer" data-file-id="${doc.id}">View</button>
-                <span class="text-gray-300">|</span>
-                <button class="edit-file-btn text-blue-600 hover:text-blue-800 hover:underline cursor-pointer" data-file-id="${doc.id}">Edit</button>
-                <span class="text-gray-300">|</span>
-                <button class="archive-file-btn text-red-600 hover:text-red-800 hover:underline cursor-pointer" data-file-id="${doc.id}" data-file-name="${doc.filename}">Archive</button>
+                <button class="edit-file-btn p-1.5 rounded-lg hover:bg-gray-100 transition-colors group" data-file-id="${doc.id}" title="Edit Document">
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                </button>
+                <button class="view-file-btn p-1.5 rounded-lg hover:bg-gray-100 transition-colors group" data-file-id="${doc.id}" title="View Details">
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-[#800000] cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                </button>
+                <button class="archive-file-btn p-1.5 rounded-lg hover:bg-red-50 transition-colors group" data-file-id="${doc.id}" data-file-name="${doc.filename}" title="Delete Document">
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-red-600 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
             </div>
         </td>
     `;
@@ -719,6 +967,336 @@ export function updateDocumentCount() {
     
     // Update row numbers
     updateRowNumbers();
+}
+
+/**
+ * Initialize document action buttons using event delegation
+ */
+function initDocumentActionButtonsDelegated() {
+    const tableBody = document.getElementById('documentsTableBody');
+    if (!tableBody) return;
+    
+    // Remove existing event listeners if any
+    const clone = tableBody.cloneNode(true);
+    tableBody.parentNode.replaceChild(clone, tableBody);
+    const newTableBody = document.getElementById('documentsTableBody');
+    
+    // Use event delegation for action buttons
+    newTableBody.addEventListener('click', async (e) => {
+        const viewBtn = e.target.closest('.view-file-btn');
+        const editBtn = e.target.closest('.edit-file-btn');
+        const archiveBtn = e.target.closest('.archive-file-btn');
+        
+        if (viewBtn) {
+            const fileId = viewBtn.getAttribute('data-file-id');
+            viewDocument(fileId);
+        } else if (editBtn) {
+            const fileId = editBtn.getAttribute('data-file-id');
+            editDocument(fileId);
+        } else if (archiveBtn) {
+            const fileId = archiveBtn.getAttribute('data-file-id');
+            const fileName = archiveBtn.getAttribute('data-file-name');
+            await archiveDocument(fileId, fileName);
+        }
+    });
+}
+
+/**
+ * View document details
+ */
+async function viewDocument(fileId) {
+    try {
+        const response = await fetch(`/backend/api/files.php?id=${fileId}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const doc = result.data;
+            Swal.fire({
+                title: doc.filename,
+                html: `
+                    <div class="text-left space-y-3">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Cabinet Number:</p>
+                            <p class="text-sm text-gray-900">${doc.cabinet_number}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Category:</p>
+                            <p class="text-sm text-gray-900">${doc.category || 'Documents'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Description:</p>
+                            <p class="text-sm text-gray-900">${doc.description || 'No description'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Status:</p>
+                            <p class="text-sm text-gray-900">${doc.status || 'available'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Added By:</p>
+                            <p class="text-sm text-gray-900">${doc.added_by || 'Admin'}</p>
+                        </div>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonColor: '#800000',
+                confirmButtonText: 'Close'
+            });
+        }
+    } catch (error) {
+        console.error('Error viewing document:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load document details',
+            confirmButtonColor: '#800000'
+        });
+    }
+}
+
+/**
+ * Edit document
+ */
+async function editDocument(fileId) {
+    try {
+        const response = await fetch(`/backend/api/files.php?id=${fileId}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const doc = result.data;
+            
+            Swal.fire({
+                title: 'Edit Document',
+                html: `
+                    <form id="editDocumentForm" class="text-left">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Document Name</label>
+                            <input 
+                                type="text" 
+                                id="editDocumentName" 
+                                value="${doc.filename}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none"
+                                required
+                            />
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select 
+                                id="editDocumentCategory" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none"
+                                required
+                            >
+                                <option value="Documents" ${doc.category === 'Documents' ? 'selected' : ''}>Documents</option>
+                                <option value="Sports" ${doc.category === 'Sports' ? 'selected' : ''}>Sports</option>
+                                <option value="Objects" ${doc.category === 'Objects' ? 'selected' : ''}>Objects</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea 
+                                id="editDocumentDescription" 
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none"
+                            >${doc.description || ''}</textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select 
+                                id="editDocumentStatus" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none"
+                                required
+                            >
+                                <option value="available" ${doc.status === 'available' ? 'selected' : ''}>Available</option>
+                                <option value="borrowed" ${doc.status === 'borrowed' ? 'selected' : ''}>Borrowed</option>
+                                <option value="archived" ${doc.status === 'archived' ? 'selected' : ''}>Archived</option>
+                            </select>
+                        </div>
+                    </form>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Save Changes',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#800000',
+                cancelButtonColor: '#6b7280',
+                preConfirm: async () => {
+                    const filename = document.getElementById('editDocumentName').value;
+                    const category = document.getElementById('editDocumentCategory').value;
+                    const description = document.getElementById('editDocumentDescription').value;
+                    const status = document.getElementById('editDocumentStatus').value;
+                    
+                    if (!filename) {
+                        Swal.showValidationMessage('Please enter a document name');
+                        return false;
+                    }
+                    
+                    return { filename, category, description, status };
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const updateData = result.value;
+                    
+                    try {
+                        const updateResponse = await fetch(`/backend/api/files.php?id=${fileId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+                        
+                        const updateResult = await updateResponse.json();
+                        
+                        if (updateResult.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: 'Document updated successfully',
+                                confirmButtonColor: '#800000'
+                            }).then(() => {
+                                // Reload documents
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const cabinetId = urlParams.get('cabinet_id');
+                                if (cabinetId) {
+                                    reloadDocumentsForCabinet(parseInt(cabinetId, 10));
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: updateResult.message || 'Failed to update document',
+                                confirmButtonColor: '#800000'
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error updating document:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to update document',
+                            confirmButtonColor: '#800000'
+                        });
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading document:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load document details',
+            confirmButtonColor: '#800000'
+        });
+    }
+}
+
+/**
+ * Archive document
+ */
+async function archiveDocument(fileId, fileName) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Archive Document?',
+        text: `Are you sure you want to archive "${fileName}"?`,
+        showCancelButton: true,
+        confirmButtonText: 'Yes, archive it',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/backend/api/files.php?id=${fileId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'archived' })
+                });
+                
+                const apiResult = await response.json();
+                
+                if (apiResult.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Archived!',
+                        text: 'Document has been archived',
+                        confirmButtonColor: '#800000'
+                    }).then(() => {
+                        // Reload documents
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const cabinetId = urlParams.get('cabinet_id');
+                        if (cabinetId) {
+                            reloadDocumentsForCabinet(parseInt(cabinetId, 10));
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: apiResult.message || 'Failed to archive document',
+                        confirmButtonColor: '#800000'
+                    });
+                }
+            } catch (error) {
+                console.error('Error archiving document:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to archive document',
+                    confirmButtonColor: '#800000'
+                });
+            }
+        }
+    });
+}
+
+/**
+ * Initialize search functionality for documents
+ */
+function initSearchFunctionality() {
+    const searchInput = document.getElementById('searchDocumentsInput');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        
+        // Update filter state
+        currentFilters.searchTerm = searchTerm;
+        
+        // Apply all filters
+        applyAllFilters();
+    });
+}
+
+/**
+ * Populate category dropdown dynamically based on documents
+ * @param {Array} categories - Array of unique categories
+ */
+function populateCategoryDropdown(categories) {
+    const categoryDropdown = document.getElementById('categorySortDropdown');
+    if (!categoryDropdown) return;
+    
+    // Clear existing options except "All Categories"
+    categoryDropdown.innerHTML = '';
+    
+    // Add "All Categories" option
+    const allOption = document.createElement('button');
+    allOption.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+    allOption.setAttribute('data-category', 'all');
+    allOption.textContent = 'All Categories';
+    categoryDropdown.appendChild(allOption);
+    
+    // Add each unique category
+    categories.forEach(category => {
+        if (category) {
+            const button = document.createElement('button');
+            button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+            button.setAttribute('data-category', category);
+            button.textContent = category;
+            categoryDropdown.appendChild(button);
+        }
+    });
 }
 
 /**

@@ -7,10 +7,19 @@ import { initDocumentManagement, showAddDocumentModal, addDocumentToTable, delet
  * Handles sidebar, active states, and papers-specific features
  */
 
+// Store current status filter state
+let currentStatusFilter = null;
+
+// Store all cabinets for filtering
+let allCabinets = [];
+
 /**
  * Initialize papers page
+ * Version: 2.0 - With Archive Support
  */
 export function initPapers() {
+    console.log('📦 Papers page initialized - Version 2.0 with Archive Support');
+    
     // Initialize sidebar with collapse functionality
     initSidebar();
     
@@ -41,11 +50,37 @@ function initFilterDropdowns() {
     const statusDropdownBtn = document.getElementById('statusDropdownBtn');
     const statusDropdown = document.getElementById('statusDropdown');
     const statusDropdownText = document.getElementById('statusDropdownText');
-    const fileCategoryDropdownBtn = document.getElementById('fileCategoryDropdownBtn');
-    const fileCategoryDropdown = document.getElementById('fileCategoryDropdown');
-    const fileCategoryDropdownText = document.getElementById('fileCategoryDropdownText');
     const searchBarContainer = document.getElementById('searchBarContainer');
-    const pageHeader = document.getElementById('pageHeader');
+    
+    // ⚡ FORCE ADD ARCHIVE OPTION TO STATUS DROPDOWN (Dynamic injection to bypass cache)
+    if (statusDropdown) {
+        console.log('🔧 Checking status dropdown for Archive option...');
+        
+        // Check if Archive option already exists
+        const existingArchiveOption = statusDropdown.querySelector('button[data-status="archived"]');
+        
+        if (!existingArchiveOption) {
+            console.log('⚠️ Archive option NOT found in HTML! Adding dynamically...');
+            
+            // Create separator
+            const separator = document.createElement('div');
+            separator.className = 'border-t border-gray-200 my-1';
+            
+            // Create Archive button
+            const archiveButton = document.createElement('button');
+            archiveButton.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium';
+            archiveButton.setAttribute('data-status', 'archived');
+            archiveButton.innerHTML = '📦 Archived';
+            
+            // Append to dropdown
+            statusDropdown.appendChild(separator);
+            statusDropdown.appendChild(archiveButton);
+            
+            console.log('✅ Archive option added dynamically!');
+        } else {
+            console.log('✅ Archive option already exists in HTML');
+        }
+    }
     
     // Cabinet Dropdown
     if (cabinetDropdownBtn && cabinetDropdown) {
@@ -58,16 +93,20 @@ function initFilterDropdowns() {
             }
         });
         
-        // Handle cabinet selection - Show documents view or filter/sort by cabinet number
-        const cabinetOptions = cabinetDropdown.querySelectorAll('button[data-cabinet]');
-        cabinetOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
+        // Use event delegation for dynamically added cabinet options
+        cabinetDropdown.addEventListener('click', (e) => {
+            const option = e.target.closest('button[data-cabinet]');
+            if (!option) return;
+            
                 e.stopPropagation();
                 const cabinetValue = option.getAttribute('data-cabinet');
                 const cabinetText = option.textContent.trim();
+            const cabinetId = option.getAttribute('data-cabinet-id');
                 
                 // Update button text
+            if (cabinetDropdownText) {
                 cabinetDropdownText.textContent = cabinetText;
+            }
                 
                 // Close dropdown
                 cabinetDropdown.classList.add('hidden');
@@ -78,14 +117,23 @@ function initFilterDropdowns() {
                 const cabinetsGrid = document.getElementById('cabinetsGrid');
                 const documentsView = document.getElementById('documentsView');
                 const selectedCabinetName = document.getElementById('selectedCabinetName');
-                const searchBarContainer = document.getElementById('searchBarContainer');
-                const pageHeader = document.getElementById('pageHeader');
                 
                 // If "All Cabinets" is selected, show cabinets grid
                 if (cabinetValue === 'all') {
                     // Show main header
                     if (mainHeader) {
                         mainHeader.classList.remove('hidden');
+                    }
+                    
+                    // Reset status dropdown to "Select Status" and show all cabinets
+                    const statusDropdownText = document.getElementById('statusDropdownText');
+                    if (statusDropdownText) {
+                        statusDropdownText.textContent = 'Select Status';
+                    }
+                    
+                    // Show all cabinets (reset any status filter)
+                    if (allCabinets && allCabinets.length > 0) {
+                        renderCabinets(allCabinets);
                     }
                     
                     // Hide search bar and restore filters section styling
@@ -100,10 +148,6 @@ function initFilterDropdowns() {
                     }
                     if (filtersSection) {
                         filtersSection.classList.remove('p-8', 'mb-8', 'bg-white', 'rounded-lg', 'shadow-md');
-                        filtersSection.classList.add('p-6', 'mb-6');
-                    }
-                    if (pageHeader) {
-                        pageHeader.classList.remove('hidden');
                     }
                     
                     // Show cabinets grid and hide documents view
@@ -116,6 +160,11 @@ function initFilterDropdowns() {
 
                     // Reset Cabinet Number filter to "All" for next time user opens documents view
                     setCabinetNumberFilter('all');
+                
+                // Update URL to remove cabinet_id parameter
+                const url = new URL(window.location);
+                url.searchParams.delete('cabinet_id');
+                window.history.pushState({}, '', url);
                 } else {
                     // Hide main header when specific cabinet is selected
                     if (mainHeader) {
@@ -128,11 +177,8 @@ function initFilterDropdowns() {
                         searchBarContainer.classList.add('visible');
                     }
                     if (filtersSection) {
-                        filtersSection.classList.remove('p-6', 'mb-6');
+                    filtersSection.classList.remove('mb-6');
                         filtersSection.classList.add('p-8', 'mb-8', 'bg-white', 'rounded-lg', 'shadow-md');
-                    }
-                    if (pageHeader) {
-                        pageHeader.classList.add('hidden');
                     }
                     
                     // Show documents view and hide cabinets grid
@@ -146,15 +192,18 @@ function initFilterDropdowns() {
                         selectedCabinetName.textContent = cabinetText;
                     }
                     
-                    // Load documents for this cabinet
-                    // TODO: Later replace this with backend fetch for the selected Cabinet (Cabinet 1/2/3)
-                    loadCabinetDocuments(cabinetValue);
+                // Load documents for this cabinet using numeric ID
+                const numericCabinetId = cabinetId || parseInt(cabinetValue);
+                loadCabinetDocuments(numericCabinetId);
 
                     // Keep Cabinet Number filter default as "All Cabinet Numbers"
-                    // (User can manually choose C1.1 / C2.1 / C3.1 from the filter dropdown)
                     setCabinetNumberFilter('all');
+                
+                // Update URL with cabinet_id parameter
+                const url = new URL(window.location);
+                url.searchParams.set('cabinet_id', numericCabinetId);
+                window.history.pushState({}, '', url);
                 }
-            });
         });
     }
     
@@ -162,64 +211,93 @@ function initFilterDropdowns() {
     if (statusDropdownBtn && statusDropdown) {
         statusDropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const isHidden = statusDropdown.classList.contains('hidden');
             statusDropdown.classList.toggle('hidden');
+            
+            if (!isHidden) {
+                console.log('📊 Status dropdown closed');
+            } else {
+                console.log('📊 Status dropdown opened - Options available:');
+                const options = statusDropdown.querySelectorAll('button[data-status]');
+                options.forEach(opt => {
+                    console.log('   -', opt.textContent.trim(), '(data-status="' + opt.getAttribute('data-status') + '")');
+                });
+            }
+            
             // Close cabinet dropdown if open
             if (cabinetDropdown) {
                 cabinetDropdown.classList.add('hidden');
             }
         });
         
-        // Handle status selection
-        const statusOptions = statusDropdown.querySelectorAll('button[data-status]');
-        statusOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const statusValue = option.getAttribute('data-status');
-                const statusText = option.textContent.trim();
-                
-                // Update button text
-                statusDropdownText.textContent = statusText;
-                
-                // Close dropdown
-                statusDropdown.classList.add('hidden');
-                
-                // TODO: Filter by status
-                console.log('Selected status:', statusValue);
-            });
-        });
-    }
-    
-    // File Category Dropdown
-    if (fileCategoryDropdownBtn && fileCategoryDropdown) {
-        fileCategoryDropdownBtn.addEventListener('click', (e) => {
+        // Handle status selection with event delegation (for dynamically added options)
+        statusDropdown.addEventListener('click', async (e) => {
+            const option = e.target.closest('button[data-status]');
+            if (!option) return;
+            
             e.stopPropagation();
-            fileCategoryDropdown.classList.toggle('hidden');
-            // Close other dropdowns if open
-            if (cabinetDropdown) {
-                cabinetDropdown.classList.add('hidden');
+            const statusValue = option.getAttribute('data-status');
+            const statusText = option.textContent.trim();
+            
+            // Update button text
+            if (statusDropdownText) {
+                statusDropdownText.textContent = statusText;
             }
-            if (statusDropdown) {
-                statusDropdown.classList.add('hidden');
+            
+            // Close dropdown
+            statusDropdown.classList.add('hidden');
+            
+            // Check if we're on the cabinet grid view or document view
+            const cabinetsGrid = document.getElementById('cabinetsGrid');
+            const documentsView = document.getElementById('documentsView');
+            const isOnCabinetGrid = cabinetsGrid && !cabinetsGrid.classList.contains('hidden');
+            const isOnDocumentView = documentsView && !documentsView.classList.contains('hidden');
+            
+            if (isOnCabinetGrid) {
+                // Filter cabinets by status
+                filterCabinetsByStatus(statusValue);
+            } else if (isOnDocumentView) {
+                // Store current status filter
+                currentStatusFilter = statusValue === 'uses' ? 'uses' : statusValue;
+                
+                // Get current cabinet ID from URL parameter (primary source)
+                const urlParams = new URLSearchParams(window.location.search);
+                let cabinetId = urlParams.get('cabinet_id');
+                
+                // If no URL param, check if documents view is visible (meaning a cabinet is selected)
+                if (!cabinetId) {
+                    const cabinetDropdownText = document.getElementById('cabinetDropdownText');
+                    if (cabinetDropdownText && 
+                        cabinetDropdownText.textContent !== 'Select Cabinet' && 
+                        cabinetDropdownText.textContent !== 'All Cabinets') {
+                        // Find matching option in dropdown
+                        const options = cabinetDropdown.querySelectorAll('button[data-cabinet-id]');
+                        for (const opt of options) {
+                            if (opt.textContent.trim() === cabinetDropdownText.textContent.trim()) {
+                                cabinetId = opt.getAttribute('data-cabinet-id');
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (cabinetId && statusValue !== 'uses') {
+                    // Filter documents by status
+                    await loadCabinetDocuments(parseInt(cabinetId, 10), statusValue);
+                } else if (cabinetId && statusValue === 'uses') {
+                    // Load uses list
+                    await loadFileUses(parseInt(cabinetId, 10));
+                } else {
+                    // Reset status filter if no cabinet selected
+                    currentStatusFilter = null;
+                    if (!cabinetId && statusDropdownText) {
+                        statusDropdownText.textContent = 'Select Status';
+                    }
+                }
+            } else {
+                // On cabinet grid view without cabinet selected - filter cabinets
+                filterCabinetsByStatus(statusValue);
             }
-        });
-        
-        // Handle file category selection
-        const categoryOptions = fileCategoryDropdown.querySelectorAll('button[data-category]');
-        categoryOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const categoryValue = option.getAttribute('data-category');
-                const categoryText = option.textContent.trim();
-                
-                // Update button text
-                fileCategoryDropdownText.textContent = categoryText;
-                
-                // Close dropdown
-                fileCategoryDropdown.classList.add('hidden');
-                
-                // TODO: Filter by file category
-                console.log('Selected file category:', categoryValue);
-            });
         });
     }
     
@@ -231,9 +309,6 @@ function initFilterDropdowns() {
         if (statusDropdownBtn && !statusDropdownBtn.contains(e.target) && statusDropdown && !statusDropdown.contains(e.target)) {
             statusDropdown.classList.add('hidden');
         }
-        if (fileCategoryDropdownBtn && !fileCategoryDropdownBtn.contains(e.target) && fileCategoryDropdown && !fileCategoryDropdown.contains(e.target)) {
-            fileCategoryDropdown.classList.add('hidden');
-        }
     });
 }
 
@@ -241,7 +316,6 @@ function initFilterDropdowns() {
  * Initialize cabinet view functionality
  */
 function initCabinetView() {
-    const viewPapersButtons = document.querySelectorAll('.view-papers-btn');
     const cabinetsGrid = document.getElementById('cabinetsGrid');
     const documentsView = document.getElementById('documentsView');
     const backToCabinetsBtn = document.getElementById('backToCabinetsBtn');
@@ -257,58 +331,8 @@ function initCabinetView() {
     // Initialize search functionality
     initSearchFunctionality();
     
-    // Handle "View Papers" button clicks (will be re-initialized after dynamic loading)
-    viewPapersButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const cabinetId = button.getAttribute('data-cabinet-id');
-            const cabinetName = button.getAttribute('data-cabinet-name');
-            
-            // Get main header element
-            const mainHeader = document.getElementById('mainHeader');
-            const filtersSection = document.getElementById('filtersSection');
-            
-            // Hide main header (Cabinets Management title, Add Cabinet button, Profile dropdown)
-            if (mainHeader) {
-                mainHeader.classList.add('hidden');
-            }
-            
-            // Update cabinet dropdown text to match selected cabinet
-            if (cabinetDropdownText) {
-                cabinetDropdownText.textContent = cabinetName;
-            }
-            
-            // Show search bar and expand filters section
-            if (searchBarContainer) {
-                searchBarContainer.classList.remove('invisible');
-                searchBarContainer.classList.add('visible');
-            }
-            if (filtersSection) {
-                filtersSection.classList.remove('p-6', 'mb-6');
-                filtersSection.classList.add('p-8', 'mb-8', 'bg-white', 'rounded-lg', 'shadow-md');
-            }
-            if (pageHeader) {
-                pageHeader.classList.add('hidden');
-            }
-            
-            // Show documents view and hide cabinets grid
-            if (cabinetsGrid) {
-                cabinetsGrid.classList.add('hidden');
-            }
-            if (documentsView) {
-                documentsView.classList.remove('hidden');
-            }
-            if (selectedCabinetName) {
-                selectedCabinetName.textContent = cabinetName;
-            }
-            
-            // Load documents for this cabinet (you can fetch from API here)
-            // TODO: Later replace this with backend fetch by cabinetId (e.g., C1.1 / C2.1 / C3.1)
-            loadCabinetDocuments(cabinetId);
-
-            // Keep Cabinet Number filter default as "All Cabinet Numbers" when opening the documents view
-            setCabinetNumberFilter('all');
-        });
-    });
+    // Note: Cabinet cards now navigate directly to view.php with animation
+    // No need for view-papers-btn event listeners as cards are clickable
     
     // Handle back button
     if (backToCabinetsBtn) {
@@ -325,6 +349,17 @@ function initCabinetView() {
             // Reset cabinet dropdown to "All Cabinets"
             if (cabinetDropdownText) {
                 cabinetDropdownText.textContent = 'Select Cabinet';
+            }
+            
+            // Reset status dropdown to "Select Status"
+            const statusDropdownText = document.getElementById('statusDropdownText');
+            if (statusDropdownText) {
+                statusDropdownText.textContent = 'Select Status';
+            }
+            
+            // Show all cabinets (reset any status filter)
+            if (allCabinets && allCabinets.length > 0) {
+                renderCabinets(allCabinets);
             }
 
             // Reset cabinet number filter to show all documents again
@@ -355,6 +390,11 @@ function initCabinetView() {
             if (documentsView) {
                 documentsView.classList.add('hidden');
             }
+            
+            // Remove cabinet_id parameter from URL
+            const url = new URL(window.location);
+            url.searchParams.delete('cabinet_id');
+            window.history.pushState({}, '', url);
             
             // Note: File Category dropdown is NOT reset - it only updates when user explicitly selects from it
         });
@@ -394,9 +434,9 @@ window.addEventListener('documentAdded', async (event) => {
 /**
  * Load documents for a specific cabinet
  * @param {string|number} cabinetId - Cabinet ID (number) or cabinet number string (e.g., 'C1.1', 'C2.1', 'C3.1')
- * TODO: Backend implementation - Fetch documents from /backend/api/files.php?cabinet_id={cabinetId}
+ * @param {string} status - Optional status filter (available, borrowed, archived)
  */
-async function loadCabinetDocuments(cabinetId) {
+async function loadCabinetDocuments(cabinetId, status = null) {
     // Extract cabinet ID if it's a string like "C1.1"
     let actualCabinetId = cabinetId;
     if (typeof cabinetId === 'string' && cabinetId.startsWith('C')) {
@@ -411,13 +451,27 @@ async function loadCabinetDocuments(cabinetId) {
     const cabinetPrefix = prefixMatch ? prefixMatch[1] : 'C' + actualCabinetId;
     
     try {
+        // Build API URL with optional status parameter
+        let apiUrl = `/backend/api/files.php?cabinet_id=${actualCabinetId}`;
+        const statusToUse = status || currentStatusFilter;
+        if (statusToUse && statusToUse !== 'uses' && ['available', 'borrowed', 'archived'].includes(statusToUse)) {
+            apiUrl += `&status=${statusToUse}`;
+        }
+        
         // Fetch documents from API
-        const response = await fetch(`/backend/api/files.php?cabinet_id=${actualCabinetId}`);
+        const response = await fetch(apiUrl);
         const result = await response.json();
         
         if (result.success && result.data) {
-            // Populate Cabinet Number filter dropdown with numbers for this cabinet
-            populateCabinetNumberFilter(cabinetPrefix);
+            // Extract unique cabinet numbers from API response
+            const uniqueCabinetNumbers = [...new Set(result.data.map(doc => doc.cabinet_number).filter(Boolean))].sort((a, b) => {
+                const numA = parseInt(a.split('.')[1], 10);
+                const numB = parseInt(b.split('.')[1], 10);
+                return numA - numB;
+            });
+            
+            // Populate Cabinet Number filter dropdown with numbers from API
+            populateCabinetNumberFilter(cabinetPrefix, uniqueCabinetNumbers);
             
             // Render documents from API
             renderDocuments(result.data);
@@ -451,96 +505,102 @@ async function loadCabinetDocuments(cabinetId) {
 }
 
 /**
- * Populate Cabinet Number filter dropdown based on selected cabinet prefix
- * Only shows cabinet numbers that actually exist in the documents table
- * @param {string} cabinetPrefix - Cabinet prefix (e.g., 'C1', 'C2', 'C3')
- * If not provided, will try to detect from selected cabinet
+ * Load file uses for a specific cabinet
+ * @param {number} cabinetId - Cabinet ID
  */
-export function populateCabinetNumberFilter(cabinetPrefix) {
-    // If prefix not provided, try to detect it
-    if (!cabinetPrefix) {
-        const selectedCabinetNameEl = document.getElementById('selectedCabinetName');
-        const cabinetDropdownTextEl = document.getElementById('cabinetDropdownText');
+async function loadFileUses(cabinetId) {
+    try {
+        const response = await fetch(`/backend/api/file_uses.php?cabinet_id=${cabinetId}`);
+        const result = await response.json();
         
-        const cabinetNameToPrefix = {
-            'Cabinet 1': 'C1',
-            'Cabinet 2': 'C2',
-            'Cabinet 3': 'C3'
-        };
-        
-        let cabinetText = '';
-        if (selectedCabinetNameEl && selectedCabinetNameEl.textContent.trim()) {
-            cabinetText = selectedCabinetNameEl.textContent.trim();
-        } else if (cabinetDropdownTextEl && cabinetDropdownTextEl.textContent.trim() && 
-                   cabinetDropdownTextEl.textContent.trim() !== 'Select Cabinet' &&
-                   cabinetDropdownTextEl.textContent.trim() !== 'All Cabinets') {
-            cabinetText = cabinetDropdownTextEl.textContent.trim();
-        }
-        
-        if (cabinetText && cabinetNameToPrefix[cabinetText]) {
-            cabinetPrefix = cabinetNameToPrefix[cabinetText];
+        if (result.success && result.data) {
+            // Map file uses to document format
+            const mappedDocuments = result.data.map(use => ({
+                id: use.file_id,
+                cabinet_number: use.cabinet_number || '',
+                filename: use.filename || 'Unknown File',
+                description: use.description || '',
+                category: use.category || 'Documents',
+                status: use.status || 'available',
+                added_by: use.uses_by || use.borrow_by || use.archived_by || 'Unknown'
+            }));
+            
+            // Extract unique cabinet numbers from API response
+            const uniqueCabinetNumbers = [...new Set(mappedDocuments.map(doc => doc.cabinet_number).filter(Boolean))].sort((a, b) => {
+                const numA = parseInt(a.split('.')[1], 10);
+                const numB = parseInt(b.split('.')[1], 10);
+                return numA - numB;
+            });
+            
+            // Get cabinet prefix from cabinet ID
+            const cabinetPrefix = 'C' + cabinetId;
+            
+            // Populate Cabinet Number filter dropdown with numbers from API
+            populateCabinetNumberFilter(cabinetPrefix, uniqueCabinetNumbers);
+            
+            // Render file uses entries using the same table structure
+            renderDocuments(mappedDocuments);
+            
+            // Update document count
+            updateDocumentCount();
         } else {
-            // Try to extract from cabinet number
-            const match = cabinetText.match(/^(C\d+)\./);
-            if (match) {
-                cabinetPrefix = match[1];
-            } else {
-                cabinetPrefix = 'C1'; // Default
+            console.error('Failed to load file uses:', result.message);
+            // Show empty state
+            const tableBody = document.getElementById('documentsTableBody');
+            const emptyStateRow = document.getElementById('emptyStateRow');
+            if (tableBody && emptyStateRow) {
+                const existingRows = tableBody.querySelectorAll('tr:not(#emptyStateRow)');
+                existingRows.forEach(row => row.remove());
+                emptyStateRow.classList.remove('hidden');
             }
+            updateDocumentCount();
         }
+    } catch (error) {
+        console.error('Error loading file uses:', error);
+        // Show empty state on error
+        const tableBody = document.getElementById('documentsTableBody');
+        const emptyStateRow = document.getElementById('emptyStateRow');
+        if (tableBody && emptyStateRow) {
+            const existingRows = tableBody.querySelectorAll('tr:not(#emptyStateRow)');
+            existingRows.forEach(row => row.remove());
+            emptyStateRow.classList.remove('hidden');
+        }
+        updateDocumentCount();
     }
+}
+
+/**
+ * Populate Cabinet Number filter dropdown based on cabinet numbers from API
+ * @param {string} cabinetPrefix - Cabinet prefix (e.g., 'C1', 'C2', 'C3')
+ * @param {Array<string>} cabinetNumbers - Array of cabinet numbers from API response (e.g., ['C1.1', 'C1.2', 'C1.3'])
+ */
+export function populateCabinetNumberFilter(cabinetPrefix, cabinetNumbers = []) {
     const dropdown = document.getElementById('cabinetNumberFilterDropdown');
     if (!dropdown) return;
     
-    // Clear existing options (except "All Cabinet Numbers")
-    const allButton = dropdown.querySelector('button[data-cabinet-number="all"]');
+    // Clear existing options
     dropdown.innerHTML = '';
-    if (allButton) {
-        dropdown.appendChild(allButton);
-    } else {
-        // Create "All Cabinet Numbers" button if it doesn't exist
-        const allBtn = document.createElement('button');
-        allBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
-        allBtn.setAttribute('data-cabinet-number', 'all');
-        allBtn.textContent = 'All Cabinet Numbers';
-        dropdown.appendChild(allBtn);
-    }
     
-    // TODO: Backend implementation - Fetch actual document numbers from database
-    // Example SQL: SELECT DISTINCT cabinet_number FROM documents WHERE cabinet_number LIKE 'C1.%' ORDER BY cabinet_number
-    // For now, scan the actual documents in the table to find existing cabinet numbers
-    const tableBody = document.getElementById('documentsTableBody');
-    const existingCabinetNumbers = new Set();
+    // Create "All Cabinet Numbers" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+    allBtn.setAttribute('data-cabinet-number', 'all');
+    allBtn.textContent = 'All Cabinet Numbers';
+    dropdown.appendChild(allBtn);
     
-    if (tableBody) {
-        const rows = tableBody.querySelectorAll('tr:not(#emptyStateRow)');
-        rows.forEach(row => {
-            const cabinetNumberCell = row.querySelector('td:nth-child(2)');
-            if (cabinetNumberCell) {
-                const cellText = cabinetNumberCell.textContent.trim();
-                // Check if this document belongs to the current cabinet prefix
-                if (cellText.startsWith(cabinetPrefix + '.')) {
-                    existingCabinetNumbers.add(cellText);
-                }
+    // Create dropdown buttons for cabinet numbers from API
+    if (cabinetNumbers && cabinetNumbers.length > 0) {
+        cabinetNumbers.forEach(cabinetNumber => {
+            // Verify cabinet number belongs to the current cabinet prefix
+            if (cabinetNumber && cabinetNumber.startsWith(cabinetPrefix + '.')) {
+                const button = document.createElement('button');
+                button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+                button.setAttribute('data-cabinet-number', cabinetNumber);
+                button.textContent = cabinetNumber;
+                dropdown.appendChild(button);
             }
         });
     }
-    
-    // Convert Set to Array and sort by number (C1.1, C1.2, C1.3, etc.)
-    const sortedNumbers = Array.from(existingCabinetNumbers).sort((a, b) => {
-        const numA = parseInt(a.split('.')[1], 10);
-        const numB = parseInt(b.split('.')[1], 10);
-        return numA - numB;
-    });
-    
-    // Create dropdown buttons only for existing cabinet numbers
-    sortedNumbers.forEach(cabinetNumber => {
-        const button = document.createElement('button');
-        button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
-        button.setAttribute('data-cabinet-number', cabinetNumber);
-        button.textContent = cabinetNumber;
-        dropdown.appendChild(button);
-    });
     
     // Re-initialize event listeners for the new buttons
     const options = dropdown.querySelectorAll('button[data-cabinet-number]');
@@ -638,12 +698,7 @@ function createDocumentRowFromAPI(doc, rowNumber) {
             <span class="px-2 py-1 text-xs rounded-full ${categoryBadgeClass}">${doc.category || 'Documents'}</span>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
-            <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-[#800000] flex items-center justify-center text-white font-semibold text-xs mr-2">
-                    ${(doc.added_by || 'A').charAt(0).toUpperCase()}
-                </div>
                 <span class="text-sm text-gray-900">${doc.added_by || 'Admin'}</span>
-            </div>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
             <span class="px-2 py-1 text-xs rounded-full ${statusBadgeClass}">${statusText}</span>
@@ -904,15 +959,71 @@ function updateRowNumbersAfterFilter() {
 
 /**
  * Load cabinets from API and render them
- * TODO: Backend implementation - Fetch cabinets from /backend/api/cabinets.php
+ * Also populates the cabinet dropdown
  */
-async function loadCabinets() {
+async function loadCabinets(includeArchived = false) {
     try {
-        const response = await fetch('/backend/api/cabinets.php');
+        const url = includeArchived ? '/backend/api/cabinets.php?include_archived=true' : '/backend/api/cabinets.php';
+        console.log('Loading cabinets from:', url);
+        
+        const response = await fetch(url);
         const result = await response.json();
         
+        console.log('API Response:', result);
+        
         if (result.success && result.data) {
+            // Store all cabinets for filtering
+            allCabinets = result.data;
+            
+            console.log('Stored cabinets in allCabinets:', allCabinets);
+            
             renderCabinets(result.data);
+            populateCabinetDropdown(result.data);
+            
+            // Populate status dropdown with unique statuses
+            populateStatusDropdown(result.data);
+            
+            // Check URL parameter for cabinet_id
+            const urlParams = new URLSearchParams(window.location.search);
+            const cabinetIdParam = urlParams.get('cabinet_id');
+            if (cabinetIdParam) {
+                const cabinetId = parseInt(cabinetIdParam, 10);
+                const cabinet = result.data.find(c => c.id === cabinetId);
+                if (cabinet) {
+                    // Auto-select this cabinet
+                    const cabinetDropdown = document.getElementById('cabinetDropdown');
+                    const cabinetDropdownText = document.getElementById('cabinetDropdownText');
+                    if (cabinetDropdown && cabinetDropdownText) {
+                        cabinetDropdownText.textContent = cabinet.name || `Cabinet ${cabinet.id}`;
+                        
+                        // Trigger the cabinet selection logic
+                        const mainHeader = document.getElementById('mainHeader');
+                        const filtersSection = document.getElementById('filtersSection');
+                        const cabinetsGrid = document.getElementById('cabinetsGrid');
+                        const documentsView = document.getElementById('documentsView');
+                        const selectedCabinetName = document.getElementById('selectedCabinetName');
+                        const searchBarContainer = document.getElementById('searchBarContainer');
+                        
+                        if (mainHeader) mainHeader.classList.add('hidden');
+                        if (searchBarContainer) {
+                            searchBarContainer.classList.remove('invisible');
+                            searchBarContainer.classList.add('visible');
+                        }
+                        if (filtersSection) {
+                            filtersSection.classList.remove('mb-6');
+                            filtersSection.classList.add('p-8', 'mb-8', 'bg-white', 'rounded-lg', 'shadow-md');
+                        }
+                        if (cabinetsGrid) cabinetsGrid.classList.add('hidden');
+                        if (documentsView) documentsView.classList.remove('hidden');
+                        if (selectedCabinetName) {
+                            selectedCabinetName.textContent = cabinet.name || `Cabinet ${cabinet.id}`;
+                        }
+                        
+                        loadCabinetDocuments(cabinetId);
+                        setCabinetNumberFilter('all');
+                    }
+                }
+            }
         } else {
             console.error('Failed to load cabinets:', result.message);
             showEmptyCabinetsState();
@@ -921,6 +1032,85 @@ async function loadCabinets() {
         console.error('Error loading cabinets:', error);
         showEmptyCabinetsState();
     }
+}
+
+/**
+ * Populate cabinet dropdown with cabinets from API
+ * @param {Array} cabinets - Array of cabinet objects
+ */
+function populateCabinetDropdown(cabinets) {
+    const cabinetDropdown = document.getElementById('cabinetDropdown');
+    if (!cabinetDropdown) return;
+    
+    // Keep the "All Cabinets" button, remove others
+    const allButton = cabinetDropdown.querySelector('button[data-cabinet="all"]');
+    cabinetDropdown.innerHTML = '';
+    if (allButton) {
+        cabinetDropdown.appendChild(allButton);
+    } else {
+        // Create "All Cabinets" button if it doesn't exist
+        const allBtn = document.createElement('button');
+        allBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+        allBtn.setAttribute('data-cabinet', 'all');
+        allBtn.textContent = 'All Cabinets';
+        cabinetDropdown.appendChild(allBtn);
+    }
+    
+    // Add each cabinet as a dropdown option
+    cabinets.forEach(cabinet => {
+        const button = document.createElement('button');
+        button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+        button.setAttribute('data-cabinet', `cabinet_${cabinet.id}`);
+        button.setAttribute('data-cabinet-id', cabinet.id.toString());
+        button.textContent = cabinet.name || `Cabinet ${cabinet.id}`;
+        cabinetDropdown.appendChild(button);
+    });
+}
+
+/**
+ * Populate status dropdown with unique cabinet statuses from API
+ * Always includes Active, Pending, and Archived options
+ * @param {Array} cabinets - Array of cabinet objects
+ */
+function populateStatusDropdown(cabinets) {
+    const statusDropdown = document.getElementById('statusDropdown');
+    if (!statusDropdown) return;
+    
+    // Clear existing options
+    statusDropdown.innerHTML = '';
+    
+    // Add "All Cabinets" option first (matching HTML structure)
+    const allStatusBtn = document.createElement('button');
+    allStatusBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium';
+    allStatusBtn.setAttribute('data-status', 'all');
+    allStatusBtn.textContent = '📋 All Cabinets';
+    statusDropdown.appendChild(allStatusBtn);
+    
+    // Always add Active option
+    const activeBtn = document.createElement('button');
+    activeBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+    activeBtn.setAttribute('data-status', 'active');
+    activeBtn.textContent = '✓ Active';
+    statusDropdown.appendChild(activeBtn);
+    
+    // Always add Pending option
+    const pendingBtn = document.createElement('button');
+    pendingBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700';
+    pendingBtn.setAttribute('data-status', 'pending');
+    pendingBtn.textContent = '⏳ Pending';
+    statusDropdown.appendChild(pendingBtn);
+    
+    // Add separator (matching HTML structure)
+    const separator = document.createElement('div');
+    separator.className = 'border-t border-gray-200 my-1';
+    statusDropdown.appendChild(separator);
+    
+    // Always add Archived option (matching HTML structure)
+    const archivedBtn = document.createElement('button');
+    archivedBtn.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium';
+    archivedBtn.setAttribute('data-status', 'archived');
+    archivedBtn.textContent = '📦 Archived';
+    statusDropdown.appendChild(archivedBtn);
 }
 
 /**
@@ -933,6 +1123,8 @@ function renderCabinets(cabinets) {
     
     if (!cabinetsGrid) return;
     
+    console.log('Rendering cabinets:', cabinets);
+    
     // Clear existing cabinets (except empty state)
     const existingCards = cabinetsGrid.querySelectorAll('.cabinet-card');
     existingCards.forEach(card => card.remove());
@@ -940,12 +1132,24 @@ function renderCabinets(cabinets) {
     if (cabinets.length === 0) {
         if (emptyState) {
             emptyState.classList.remove('hidden');
+            // Reset empty state message to default if needed
+            const emptyTitle = emptyState.querySelector('h3');
+            const emptyText = emptyState.querySelector('p');
+            if (emptyTitle && !emptyTitle.textContent.includes('archived')) {
+                emptyTitle.textContent = 'No cabinets';
+                if (emptyText) emptyText.textContent = 'Get started by adding a new cabinet.';
+            }
         }
         return;
     }
     
     if (emptyState) {
         emptyState.classList.add('hidden');
+        // Reset empty state message to default
+        const emptyTitle = emptyState.querySelector('h3');
+        const emptyText = emptyState.querySelector('p');
+        if (emptyTitle) emptyTitle.textContent = 'No cabinets';
+        if (emptyText) emptyText.textContent = 'Get started by adding a new cabinet.';
     }
     
     cabinets.forEach(cabinet => {
@@ -953,65 +1157,10 @@ function renderCabinets(cabinets) {
         cabinetsGrid.appendChild(card);
     });
     
-    // Re-initialize View Papers button listeners
-    const viewPapersButtons = document.querySelectorAll('.view-papers-btn');
-    viewPapersButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const cabinetId = button.getAttribute('data-cabinet-id');
-            const cabinetName = button.getAttribute('data-cabinet-name');
-            
-            // Get main header element
-            const mainHeader = document.getElementById('mainHeader');
-            const filtersSection = document.getElementById('filtersSection');
-            
-            // Hide main header (Cabinets Management title, Add Cabinet button, Profile dropdown)
-            if (mainHeader) {
-                mainHeader.classList.add('hidden');
-            }
-            
-            // Update cabinet dropdown text to match selected cabinet
-            const cabinetDropdownText = document.getElementById('cabinetDropdownText');
-            if (cabinetDropdownText) {
-                cabinetDropdownText.textContent = cabinetName;
-            }
-            
-            // Show search bar and expand filters section
-            const searchBarContainer = document.getElementById('searchBarContainer');
-            if (searchBarContainer) {
-                searchBarContainer.classList.remove('invisible');
-                searchBarContainer.classList.add('visible');
-            }
-            if (filtersSection) {
-                filtersSection.classList.remove('p-6', 'mb-6');
-                filtersSection.classList.add('p-8', 'mb-8', 'bg-white', 'rounded-lg', 'shadow-md');
-            }
-            const pageHeader = document.getElementById('pageHeader');
-            if (pageHeader) {
-                pageHeader.classList.add('hidden');
-            }
-            
-            // Show documents view and hide cabinets grid
-            const cabinetsGrid = document.getElementById('cabinetsGrid');
-            const documentsView = document.getElementById('documentsView');
-            if (cabinetsGrid) {
-                cabinetsGrid.classList.add('hidden');
-            }
-            if (documentsView) {
-                documentsView.classList.remove('hidden');
-            }
-            const selectedCabinetName = document.getElementById('selectedCabinetName');
-            if (selectedCabinetName) {
-                selectedCabinetName.textContent = cabinetName;
-            }
-            
-            // Load documents for this cabinet
-            // TODO: Backend implementation - Fetch documents from /backend/api/files.php?cabinet_id={cabinetId}
-            loadCabinetDocuments(cabinetId);
-            
-            // Keep Cabinet Number filter default as "All Cabinet Numbers" when opening the documents view
-            setCabinetNumberFilter('all');
-        });
-    });
+    console.log(`Rendered ${cabinets.length} cabinet(s)`);
+    
+    // Note: Cabinet cards now have click event listeners attached in createCabinetCard()
+    // They navigate directly to view.php with animation
 }
 
 /**
@@ -1021,54 +1170,497 @@ function renderCabinets(cabinets) {
  */
 function createCabinetCard(cabinet) {
     const card = document.createElement('div');
-    card.className = 'cabinet-card bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-[#800000]';
+    card.className = 'cabinet-card group cursor-pointer';
     
-    // Status badge styling
-    let statusBadgeClass = 'bg-green-100 text-green-800';
+    // Status badge styling and colors
+    let statusBadgeClass = 'bg-emerald-500';
     let statusText = 'Active';
+    let cabinetBg = 'bg-emerald-50';
+    let cabinetBorder = 'border-emerald-200';
+    let drawerColor = 'bg-emerald-100';
+    let handleColor = 'bg-emerald-600';
+    let hoverHintBg = 'bg-emerald-600';
+    let hoverHintText = 'text-white';
+    
     if (cabinet.status === 'pending') {
-        statusBadgeClass = 'bg-orange-100 text-orange-800';
+        statusBadgeClass = 'bg-amber-500';
         statusText = 'Pending';
+        cabinetBg = 'bg-amber-50';
+        cabinetBorder = 'border-amber-200';
+        drawerColor = 'bg-amber-100';
+        handleColor = 'bg-amber-600';
+        hoverHintBg = 'bg-amber-600';
+        hoverHintText = 'text-white';
     } else if (cabinet.status === 'archived') {
-        statusBadgeClass = 'bg-gray-100 text-gray-800';
+        statusBadgeClass = 'bg-gray-400';
         statusText = 'Archived';
+        cabinetBg = 'bg-gray-50';
+        cabinetBorder = 'border-gray-200';
+        drawerColor = 'bg-gray-100';
+        handleColor = 'bg-gray-500';
+        hoverHintBg = 'bg-gray-600';
+        hoverHintText = 'text-white';
     }
     
     const fileCount = cabinet.file_count || 0;
-    const cabinetId = 'C' + cabinet.id + '.1'; // First document number for this cabinet
     const cabinetName = cabinet.name || 'Cabinet ' + cabinet.id;
+    const description = cabinet.description || 'Document storage';
     
     card.innerHTML = `
-        <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-                <div class="w-12 h-12 bg-[#800000]/10 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                    </svg>
-                </div>
-                <span class="px-2 py-1 text-xs rounded-full ${statusBadgeClass}">${statusText}</span>
-            </div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">${cabinetName}</h3>
-            <p class="text-sm text-gray-600 mb-3">${cabinet.description || 'No description'}</p>
-            <div class="flex items-center gap-2 mb-4">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                <span class="text-xs text-gray-600 font-medium">${fileCount} Paper${fileCount !== 1 ? 's' : ''}</span>
-            </div>
-            <div class="flex items-center justify-between text-xs text-gray-500">
-                <span></span>
-                <button class="view-papers-btn text-[#800000] hover:text-[#700000] hover:bg-[#800000]/10 hover:underline font-medium cursor-pointer px-2 py-1 rounded transition-all duration-200 flex items-center gap-1 group" data-cabinet-id="${cabinet.id}" data-cabinet-name="${cabinetName}">
-                    <span>View Papers</span>
-                    <svg class="w-3 h-3 transform group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        <div class="cabinet-container relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-visible border-2 ${cabinetBorder}" data-cabinet-id="${cabinet.id}" data-cabinet-name="${cabinetName}">
+            <!-- Status Badge (Top Right Corner, Middle of Border) - Editable -->
+            <div class="status-section absolute -top-3 right-4 z-20">
+                <!-- View Mode -->
+                <button class="status-badge-view px-2.5 py-1 text-xs font-semibold rounded-full ${statusBadgeClass} text-white shadow-sm hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1" title="Click to change status">
+                    ${statusText}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
+                
+                <!-- Edit Mode (Dropdown) -->
+                <div class="status-edit-dropdown hidden absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button class="status-option w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 transition-colors ${cabinet.status === 'active' ? 'bg-emerald-100 font-semibold' : ''}" data-status="active">
+                        <span class="text-emerald-600">● Active</span>
+                    </button>
+                    <button class="status-option w-full text-left px-3 py-2 text-sm hover:bg-amber-50 transition-colors ${cabinet.status === 'pending' ? 'bg-amber-100 font-semibold' : ''}" data-status="pending">
+                        <span class="text-amber-600">● Pending</span>
+                    </button>
+                    <button class="status-option w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${cabinet.status === 'archived' ? 'bg-gray-100 font-semibold' : ''}" data-status="archived">
+                        <span class="text-gray-600">● Archived</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Cabinet Body -->
+            <div class="cabinet-body p-6 ${cabinetBg} transition-all duration-300">
+                <!-- Cabinet Header (Editable Area) -->
+                <div class="bg-white rounded-lg p-4 mb-4 shadow-sm border ${cabinetBorder}">
+                    <!-- Cabinet Name - Editable -->
+                    <div class="name-section mb-2">
+                        <!-- View Mode -->
+                        <div class="name-view-mode group cursor-pointer" title="Click to edit name">
+                            <h3 class="cabinet-name text-lg font-bold text-gray-800 truncate hover:text-[#800000] transition-colors">
+                                ${cabinetName}
+                            </h3>
+                        </div>
+                        
+                        <!-- Edit Mode -->
+                        <div class="name-edit-mode hidden">
+                            <div class="flex items-center gap-2">
+                                <input 
+                                    type="text" 
+                                    class="cabinet-name-input flex-1 px-2 py-1 text-lg font-bold text-gray-800 border-2 border-[#800000] rounded focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none"
+                                    value="${cabinetName}"
+                                />
+                                <button class="save-name-btn p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Save">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                                <button class="cancel-name-btn p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Cancel">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cabinet Description - Editable -->
+                    <div class="description-section">
+                        <!-- View Mode -->
+                        <div class="description-view-mode group cursor-pointer" title="Click to edit description">
+                            <p class="cabinet-description text-sm text-gray-600 truncate hover:text-[#800000] transition-colors">
+                                ${description}
+                            </p>
+                        </div>
+                        
+                        <!-- Edit Mode -->
+                        <div class="description-edit-mode hidden">
+                            <div class="flex items-start gap-2">
+                                <textarea 
+                                    class="cabinet-description-input flex-1 px-2 py-1 text-sm text-gray-600 border-2 border-[#800000] rounded focus:ring-2 focus:ring-[#800000] focus:border-[#800000] outline-none resize-none"
+                                    rows="2"
+                                >${description}</textarea>
+                                <div class="flex flex-col gap-1">
+                                    <button class="save-description-btn p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Save">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="cancel-description-btn p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Cancel">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Drawer 1 (Animated) -->
+                <div class="drawer-1 relative ${drawerColor} rounded-lg p-4 mb-3 border-2 ${cabinetBorder} transition-all duration-700 shadow-inner">
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${handleColor} w-16 h-2 rounded-full shadow-md"></div>
+                </div>
+                
+                <!-- Drawer 2 (Animated) -->
+                <div class="drawer-2 relative ${drawerColor} rounded-lg p-3 border-2 ${cabinetBorder} transition-all duration-700 shadow-inner">
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${handleColor} w-12 h-1.5 rounded-full shadow-md"></div>
+                </div>
+                
+                <!-- File Count -->
+                <div class="flex items-center justify-center gap-2 mt-4 text-gray-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="text-sm font-semibold">${fileCount} Document${fileCount !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+            
+            <!-- Click hint (appears on hover, only when not editing) -->
+            <div class="click-hint absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-300 flex items-center justify-center pointer-events-none rounded-xl">
+                <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 ${hoverHintBg} ${hoverHintText} px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Click to Open</span>
+                </div>
             </div>
         </div>
     `;
     
+    // Add click event listener to the cabinet card
+    const cabinetContainer = card.querySelector('.cabinet-container');
+    const clickHint = card.querySelector('.click-hint');
+    
+    cabinetContainer.addEventListener('click', (e) => {
+        // Don't open if clicking on editable elements or dropdowns
+        if (e.target.closest('.status-section') || 
+            e.target.closest('.name-section') || 
+            e.target.closest('.description-section') ||
+            e.target.closest('.status-edit-dropdown')) {
+            return;
+        }
+        e.preventDefault();
+        openCabinetWithAnimation(cabinet.id, cabinetContainer);
+    });
+    
+    // Status Badge Editing
+    const statusBadgeView = card.querySelector('.status-badge-view');
+    const statusDropdown = card.querySelector('.status-edit-dropdown');
+    const statusOptions = card.querySelectorAll('.status-option');
+    
+    if (statusBadgeView && statusDropdown) {
+        statusBadgeView.addEventListener('click', (e) => {
+            e.stopPropagation();
+            statusDropdown.classList.toggle('hidden');
+        });
+        
+        statusOptions.forEach(option => {
+            option.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const newStatus = option.getAttribute('data-status');
+                
+                if (newStatus === cabinet.status) {
+                    statusDropdown.classList.add('hidden');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/backend/api/cabinets.php?id=${cabinet.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            status: newStatus
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const Swal = (await import('sweetalert2')).default;
+                        
+                        // Determine message based on status change
+                        let messageText = `Cabinet status changed to ${newStatus}`;
+                        if (newStatus === 'archived') {
+                            messageText = 'Cabinet archived successfully';
+                        } else if (cabinet.status === 'archived' && newStatus !== 'archived') {
+                            messageText = 'Cabinet restored successfully';
+                        }
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Status Updated!',
+                            text: messageText,
+                            confirmButtonColor: '#800000',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        
+                        // Check if we're currently filtering by archived status
+                        const statusDropdownText = document.getElementById('statusDropdownText');
+                        const isViewingArchived = statusDropdownText && statusDropdownText.textContent.includes('Archived');
+                        
+                        // Reload cabinets with appropriate filter
+                        if (isViewingArchived) {
+                            // If viewing archived cabinets, reload with archived included
+                            await loadCabinets(true);
+                            const archivedCabinets = allCabinets.filter(c => c.status === 'archived');
+                            renderCabinets(archivedCabinets);
+                        } else {
+                            // Otherwise reload without archived
+                            await loadCabinets(false);
+                            renderCabinets(allCabinets);
+                        }
+                    } else {
+                        throw new Error(result.message || 'Failed to update status');
+                    }
+                } catch (error) {
+                    const Swal = (await import('sweetalert2')).default;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to update status: ' + error.message,
+                        confirmButtonColor: '#800000'
+                    });
+                }
+                
+                statusDropdown.classList.add('hidden');
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.status-section')) {
+                statusDropdown.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Cabinet Name Editing
+    const nameViewMode = card.querySelector('.name-view-mode');
+    const nameEditMode = card.querySelector('.name-edit-mode');
+    const cabinetNameEl = card.querySelector('.cabinet-name');
+    const nameInput = card.querySelector('.cabinet-name-input');
+    const saveNameBtn = card.querySelector('.save-name-btn');
+    const cancelNameBtn = card.querySelector('.cancel-name-btn');
+    
+    if (nameViewMode && nameEditMode) {
+        nameViewMode.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nameViewMode.classList.add('hidden');
+            nameEditMode.classList.remove('hidden');
+            clickHint.style.display = 'none';
+            nameInput.focus();
+            nameInput.select();
+        });
+        
+        saveNameBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newName = nameInput.value.trim();
+            
+            if (!newName) {
+                const Swal = (await import('sweetalert2')).default;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Cabinet name cannot be empty',
+                    confirmButtonColor: '#800000'
+                });
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/backend/api/cabinets.php?id=${cabinet.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: newName
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    cabinetNameEl.textContent = newName;
+                    cabinet.name = newName;
+                    
+                    nameViewMode.classList.remove('hidden');
+                    nameEditMode.classList.add('hidden');
+                    clickHint.style.display = '';
+                    
+                    const Swal = (await import('sweetalert2')).default;
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved!',
+                        text: 'Cabinet name updated successfully',
+                        confirmButtonColor: '#800000',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    throw new Error(result.message || 'Failed to update name');
+                }
+            } catch (error) {
+                const Swal = (await import('sweetalert2')).default;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to update name: ' + error.message,
+                    confirmButtonColor: '#800000'
+                });
+            }
+        });
+        
+        cancelNameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nameInput.value = cabinet.name;
+            nameViewMode.classList.remove('hidden');
+            nameEditMode.classList.add('hidden');
+            clickHint.style.display = '';
+        });
+        
+        // Save on Enter key
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveNameBtn.click();
+            } else if (e.key === 'Escape') {
+                cancelNameBtn.click();
+            }
+        });
+    }
+    
+    // Cabinet Description Editing
+    const descViewMode = card.querySelector('.description-view-mode');
+    const descEditMode = card.querySelector('.description-edit-mode');
+    const cabinetDescEl = card.querySelector('.cabinet-description');
+    const descInput = card.querySelector('.cabinet-description-input');
+    const saveDescBtn = card.querySelector('.save-description-btn');
+    const cancelDescBtn = card.querySelector('.cancel-description-btn');
+    
+    if (descViewMode && descEditMode) {
+        descViewMode.addEventListener('click', (e) => {
+            e.stopPropagation();
+            descViewMode.classList.add('hidden');
+            descEditMode.classList.remove('hidden');
+            clickHint.style.display = 'none';
+            descInput.focus();
+        });
+        
+        saveDescBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newDescription = descInput.value.trim();
+            
+            try {
+                const response = await fetch(`/backend/api/cabinets.php?id=${cabinet.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: newDescription
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    cabinetDescEl.textContent = newDescription;
+                    cabinet.description = newDescription;
+                    
+                    descViewMode.classList.remove('hidden');
+                    descEditMode.classList.add('hidden');
+                    clickHint.style.display = '';
+                    
+                    const Swal = (await import('sweetalert2')).default;
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved!',
+                        text: 'Description updated successfully',
+                        confirmButtonColor: '#800000',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    throw new Error(result.message || 'Failed to update description');
+                }
+            } catch (error) {
+                const Swal = (await import('sweetalert2')).default;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to update description: ' + error.message,
+                    confirmButtonColor: '#800000'
+                });
+            }
+        });
+        
+        cancelDescBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            descInput.value = cabinet.description;
+            descViewMode.classList.remove('hidden');
+            descEditMode.classList.add('hidden');
+            clickHint.style.display = '';
+        });
+        
+        // Save on Ctrl+Enter
+        descInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                saveDescBtn.click();
+            } else if (e.key === 'Escape') {
+                cancelDescBtn.click();
+            }
+        });
+    }
+    
     return card;
+}
+
+/**
+ * Open cabinet with drawer animation
+ * @param {number} cabinetId - Cabinet ID
+ * @param {HTMLElement} cabinetElement - The cabinet card element
+ */
+function openCabinetWithAnimation(cabinetId, cabinetElement) {
+    // Disable pointer events to prevent multiple clicks
+    cabinetElement.style.pointerEvents = 'none';
+    
+    // Get main drawer and cabinet body
+    const drawer1 = cabinetElement.querySelector('.drawer-1');
+    const cabinetBody = cabinetElement.querySelector('.cabinet-body');
+    
+    // Open main drawer (pulls forward towards viewer smoothly)
+    setTimeout(() => {
+        drawer1.style.transform = 'translateZ(50px) scale(1.08)';
+        drawer1.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.35)';
+        drawer1.style.zIndex = '10';
+    }, 150);
+    
+    // Subtle cabinet body background fade
+    setTimeout(() => {
+        if (cabinetBody) {
+            cabinetBody.style.opacity = '0.85';
+        }
+    }, 250);
+    
+    // After drawer opens, fade out entire card
+    setTimeout(() => {
+        cabinetElement.style.transform = 'scale(0.95)';
+        cabinetElement.style.opacity = '0';
+    }, 700);
+    
+    // Navigate to the page after animation completes
+    setTimeout(() => {
+        window.location.href = `/frontend/pages/cabinets/view.php?cabinet_id=${cabinetId}`;
+    }, 1000);
 }
 
 /**
@@ -1079,6 +1671,88 @@ function showEmptyCabinetsState() {
     if (emptyState) {
         emptyState.classList.remove('hidden');
     }
+}
+
+/**
+ * Filter cabinets by status
+ * @param {string} status - Status to filter by ('all', 'active', 'pending', 'archived')
+ */
+async function filterCabinetsByStatus(status) {
+    console.log('Filtering by status:', status);
+    
+    // If filtering by archived, reload cabinets with archived included
+    if (status === 'archived') {
+        console.log('Loading archived cabinets...');
+        await loadCabinets(true);
+        console.log('All cabinets loaded:', allCabinets);
+        
+        const cabinetsGrid = document.getElementById('cabinetsGrid');
+        const emptyState = document.getElementById('emptyCabinetsState');
+        
+        // Clear existing cards
+        if (cabinetsGrid) {
+            const existingCards = cabinetsGrid.querySelectorAll('.cabinet-card');
+            existingCards.forEach(card => card.remove());
+        }
+        
+        // Filter to show only archived cabinets
+        if (allCabinets && allCabinets.length > 0) {
+            const archivedCabinets = allCabinets.filter(cabinet => cabinet.status === 'archived');
+            console.log('Archived cabinets found:', archivedCabinets);
+            
+            if (archivedCabinets.length === 0) {
+                // Show empty state if no archived cabinets
+                if (emptyState) {
+                    emptyState.classList.remove('hidden');
+                    const emptyTitle = emptyState.querySelector('h3');
+                    const emptyText = emptyState.querySelector('p');
+                    if (emptyTitle) emptyTitle.textContent = 'No archived cabinets';
+                    if (emptyText) emptyText.textContent = 'You have no archived cabinets at the moment.';
+                }
+            } else {
+                // Hide empty state and render archived cabinets
+                if (emptyState) {
+                    emptyState.classList.add('hidden');
+                }
+                renderCabinets(archivedCabinets);
+            }
+        } else {
+            // No cabinets at all - show empty state
+            if (emptyState) {
+                emptyState.classList.remove('hidden');
+                const emptyTitle = emptyState.querySelector('h3');
+                const emptyText = emptyState.querySelector('p');
+                if (emptyTitle) emptyTitle.textContent = 'No archived cabinets';
+                if (emptyText) emptyText.textContent = 'You have no archived cabinets at the moment.';
+            }
+        }
+        return;
+    }
+    
+    // For other statuses, reload without archived
+    if (status === 'all' || status === 'active' || status === 'pending') {
+        await loadCabinets(false);
+    }
+    
+    if (!allCabinets || allCabinets.length === 0) {
+        console.log('No cabinets available');
+        return;
+    }
+    
+    let filteredCabinets = allCabinets;
+    
+    // Filter cabinets if status is not 'all'
+    if (status !== 'all') {
+        filteredCabinets = allCabinets.filter(cabinet => {
+            const cabinetStatus = cabinet.status || 'active';
+            return cabinetStatus === status;
+        });
+    }
+    
+    console.log('Filtered cabinets:', filteredCabinets);
+    
+    // Re-render the filtered cabinets
+    renderCabinets(filteredCabinets);
 }
 
 /**
@@ -1557,9 +2231,9 @@ async function showEditFileModal(fileId) {
                             
                             if (cabinetDropdownText && cabinetDropdownText.textContent.trim() !== 'Select Cabinet' && cabinetDropdownText.textContent.trim() !== 'All Cabinets') {
                                 // Try to extract from cabinet name or get from data attribute
-                                const viewBtn = document.querySelector(`.view-papers-btn[data-cabinet-name="${cabinetDropdownText.textContent.trim()}"]`);
-                                if (viewBtn) {
-                                    cabinetId = viewBtn.getAttribute('data-cabinet-id');
+                                const cabinetCard = document.querySelector(`.cabinet-container[data-cabinet-name="${cabinetDropdownText.textContent.trim()}"]`);
+                                if (cabinetCard) {
+                                    cabinetId = cabinetCard.getAttribute('data-cabinet-id');
                                 }
                             }
                             
@@ -1634,9 +2308,9 @@ async function archiveFile(fileId, fileName) {
                     // Reload documents for current cabinet
                     const cabinetDropdownText = document.getElementById('cabinetDropdownText');
                     if (cabinetDropdownText && cabinetDropdownText.textContent.trim() !== 'Select Cabinet' && cabinetDropdownText.textContent.trim() !== 'All Cabinets') {
-                        const viewBtn = document.querySelector(`.view-papers-btn[data-cabinet-name="${cabinetDropdownText.textContent.trim()}"]`);
-                        if (viewBtn) {
-                            const cabinetId = viewBtn.getAttribute('data-cabinet-id');
+                        const cabinetCard = document.querySelector(`.cabinet-container[data-cabinet-name="${cabinetDropdownText.textContent.trim()}"]`);
+                        if (cabinetCard) {
+                            const cabinetId = cabinetCard.getAttribute('data-cabinet-id');
                             loadCabinetDocuments(cabinetId);
                         }
                     }

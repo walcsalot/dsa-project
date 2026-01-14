@@ -9,6 +9,28 @@ $isDev = !file_exists(__DIR__ . '/dist/index.php');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DSA Project</title>
+    
+    <!-- Inline critical CSS to prevent FOUC -->
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        body {
+            opacity: 0;
+            transition: opacity 0.15s ease-in;
+        }
+        body.loaded {
+            opacity: 1;
+        }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+    </style>
+    
     <?php if ($isDev): ?>
         <!-- Vite HMR Client - Must be loaded first for auto-refresh -->
         <script type="module">
